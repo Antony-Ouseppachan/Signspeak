@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SignSpeak - Sign it, they'll hear it</title>
+<meta name="description" content="SignSpeak turns sign language into speech during video calls, paired with an AI chatbot and a learning platform.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;0,600;1,500&family=Work+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --sand:#C8B7A6;
+    --blue:#7D94B5;
+    --rose:#C29591;
+    --maroon:#703F37;
+    --sage:#B6C199;
+    --bg:#F5EFE6;
+    --bg-panel:#FDFAF5;
+    --surface:rgba(112,63,55,0.045);
+    --surface-strong:rgba(112,63,55,0.08);
+    --border:rgba(112,63,55,0.15);
+    --text:#3A281F;
+    --text-dim:#7C6A5E;
+    --text-faint:#A9998A;
+    --radius:16px;
+    --shadow-sm:0 1px 2px rgba(58,40,31,0.06), 0 2px 8px rgba(58,40,31,0.05);
+    --shadow-md:0 2px 6px rgba(58,40,31,0.07), 0 12px 28px rgba(58,40,31,0.10);
+    --shadow-lg:0 8px 20px rgba(58,40,31,0.12), 0 24px 60px rgba(58,40,31,0.16);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:
+      radial-gradient(1000px 600px at 85% -6%, rgba(125,148,181,0.14), transparent 60%),
+      radial-gradient(900px 560px at -8% 10%, rgba(194,149,145,0.18), transparent 55%),
+      var(--bg);
+    background-attachment:fixed;
+    color:var(--text);
+    font-family:'Work Sans', system-ui, sans-serif;
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+  /* subtle grain for depth */
+  body::before{
+    content:''; position:fixed; inset:0; pointer-events:none; z-index:1; opacity:.05; mix-blend-mode:multiply;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  h1,h2,h3,.display{font-family:'Fraunces', serif;}
+  .mono{font-family:'JetBrains Mono', monospace;}
+  a{color:inherit; text-decoration:none;}
+  ::selection{background:var(--maroon); color:#fff;}
+  :focus-visible{outline:2px solid var(--maroon); outline-offset:3px; border-radius:6px;}
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important; scroll-behavior:auto !important;}
+  }
+
+  /* ---------- Splash (cinematic, "Escape"-inspired) ---------- */
+  #splash{
+    position:fixed; inset:0; z-index:200; overflow:hidden;
+    background:
+      linear-gradient(180deg, rgba(58,40,31,0.55), rgba(58,40,31,0.82) 65%, rgba(31,20,15,0.94)),
+      radial-gradient(120% 70% at 50% 0%, #8B7264, #4E362D 60%, #2B1D17 100%);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    transition:opacity .8s ease, visibility .8s ease;
+  }
+  #splash.hide{opacity:0; visibility:hidden; pointer-events:none;}
+  .streaks{position:absolute; inset:0; display:flex; opacity:.5;}
+  .streaks span{flex:1; background:linear-gradient(180deg, transparent, rgba(245,239,230,0.12), transparent); transform:scaleY(0); transform-origin:bottom; animation:streakUp 3.4s ease-in-out infinite;}
+  @keyframes streakUp{0%{transform:scaleY(0); opacity:0;} 45%{transform:scaleY(1); opacity:.9;} 100%{transform:scaleY(0.2); opacity:0;}}
+  #splash .content{position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; text-align:center;}
+  #splash .splash-logo{width:60px; height:60px; margin-bottom:20px; animation:floaty 3.2s ease-in-out infinite; filter:drop-shadow(0 8px 16px rgba(0,0,0,0.35));}
+  @keyframes floaty{0%,100%{transform:translateY(0);} 50%{transform:translateY(-9px);}}
+  #splash h1{
+    font-size:clamp(46px,9vw,88px); font-style:italic; font-weight:500; letter-spacing:-0.01em;
+    color:#F7F1E8; opacity:0; animation:riseIn 1.1s ease forwards .2s; text-shadow:0 4px 30px rgba(0,0,0,0.35);
+  }
+  #splash p{
+    margin-top:14px; font-size:13px; letter-spacing:.28em; text-transform:uppercase; color:#D9C9B8;
+    opacity:0; animation:riseIn 1.1s ease forwards .5s;
+  }
+  @keyframes riseIn{from{opacity:0; transform:translateY(16px);} to{opacity:1; transform:translateY(0);}}
+  .splash-rule{width:34px; height:1.5px; background:#C29591; margin:18px auto 0; opacity:0; animation:riseIn 1.1s ease forwards .7s;}
+  #splash .skip{
+    position:absolute; left:34px; bottom:30px; z-index:3; font-size:12px; letter-spacing:.08em; color:#D9C9B8;
+    background:none; border:none; cursor:pointer; opacity:0; animation:riseIn 1.1s ease forwards 1.1s;
+    display:flex; align-items:center; gap:8px;
+  }
+  #splash .skip::before{content:''; width:6px; height:6px; border-radius:50%; background:#C29591; animation:blink 1.6s infinite;}
+  #splash .skip:hover{color:#fff;}
+
+  /* ---------- Layout shell ---------- */
+  .shell{display:flex; min-height:100vh; position:relative; z-index:2;}
+
+  .sidebar{
+    width:84px; flex-shrink:0;
+    display:flex; flex-direction:column; align-items:center;
+    padding:26px 0 22px;
+    border-right:1px solid var(--border);
+    background:rgba(255,255,255,0.4);
+    box-shadow:var(--shadow-sm);
+    position:sticky; top:0; height:100vh; z-index:40;
+  }
+  .sidebar .mark{
+    width:40px; height:40px; border-radius:12px;
+    background:linear-gradient(140deg, var(--rose), var(--blue));
+    display:flex; align-items:center; justify-content:center;
+    margin-bottom:34px; box-shadow:var(--shadow-md);
+    transition:transform .25s ease;
+  }
+  .sidebar .mark:hover{transform:scale(1.06) rotate(-3deg);}
+  .sidebar .mark svg{width:24px; height:24px;}
+  .navlinks{display:flex; flex-direction:column; gap:6px; align-items:center; flex:1;}
+  .navlink{
+    width:56px; height:56px; border-radius:14px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:5px; color:var(--text-faint); cursor:pointer;
+    transition:background .18s ease, color .18s ease, transform .18s ease; border:1px solid transparent;
+  }
+  .navlink svg{width:19px; height:19px; transition:transform .2s ease;}
+  .navlink span{font-size:9.5px; letter-spacing:.02em; font-weight:500;}
+  .navlink:hover{background:var(--surface); color:var(--text-dim); transform:translateX(2px);}
+  .navlink:hover svg{transform:scale(1.1);}
+  .navlink.active{background:var(--surface-strong); color:var(--maroon); border-color:var(--border); box-shadow:var(--shadow-sm);}
+  .sidebar .foot{color:var(--text-faint); font-size:9px; writing-mode:vertical-rl; letter-spacing:.14em; margin-top:14px;}
+
+  .main{flex:1; min-width:0; position:relative;}
+  .view{display:none;}
+  .view.active{display:block; animation:fadein .5s ease;}
+  @keyframes fadein{from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);}}
+
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:20px 40px; border-bottom:1px solid var(--border);
+    position:sticky; top:0; backdrop-filter:blur(14px);
+    background:rgba(245,239,230,0.82); z-index:30;
+  }
+  .brand{display:flex; align-items:center; gap:10px; font-family:'Fraunces'; font-weight:500; font-size:17px; font-style:italic; letter-spacing:.01em;}
+  .brand .mini-logo{width:28px; height:28px;}
+  .cta-row{display:flex; gap:10px; align-items:center;}
+  .btn{
+    padding:10px 18px; border-radius:10px; font-size:13.5px; font-weight:500;
+    border:1px solid var(--border); cursor:pointer; transition:all .18s ease;
+    background:var(--bg-panel); color:var(--text-dim); font-family:inherit; box-shadow:var(--shadow-sm);
+  }
+  .btn:hover{border-color:var(--maroon); color:var(--maroon); transform:translateY(-1px); box-shadow:var(--shadow-md);}
+  .btn:active{transform:translateY(0) scale(.97);}
+  .btn-primary{background:linear-gradient(160deg, #7C463D, var(--maroon)); color:#fff; border:none; box-shadow:var(--shadow-md);}
+  .btn-primary:hover{filter:brightness(1.1); color:#fff;}
+
+  /* reveal-on-scroll */
+  .reveal{opacity:0; transform:translateY(22px); transition:opacity .7s ease, transform .7s ease;}
+  .reveal.in{opacity:1; transform:translateY(0);}
+
+  /* ---------- HERO ---------- */
+  .hero{padding:80px 40px 60px; max-width:1080px; margin:0 auto; display:grid; grid-template-columns:1.05fr 0.95fr; gap:56px; align-items:center;}
+  .eyebrow{display:inline-flex; align-items:center; gap:8px; font-size:11.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--maroon); font-weight:600; margin-bottom:20px;}
+  .eyebrow::before{content:''; width:6px; height:6px; border-radius:50%; background:var(--rose);}
+  .hero h1{font-size:clamp(34px,4.6vw,54px); line-height:1.08; font-weight:500;}
+  .hero h1 .grad{font-style:italic; color:var(--maroon);}
+  .hero p.lede{margin-top:22px; color:var(--text-dim); font-size:16.5px; line-height:1.65; max-width:480px;}
+  .hero .actions{margin-top:32px; display:flex; gap:12px; flex-wrap:wrap;}
+  .flowchip{display:flex; align-items:center; gap:8px; margin-top:34px; flex-wrap:wrap;}
+  .flowchip .step{font-family:'JetBrains Mono'; font-size:11px; color:var(--text-dim); background:var(--bg-panel); border:1px solid var(--border); padding:7px 11px; border-radius:8px; box-shadow:var(--shadow-sm); transition:transform .18s ease;}
+  .flowchip .step:hover{transform:translateY(-2px); border-color:var(--maroon);}
+  .flowchip .arrow{color:var(--text-faint); font-size:13px;}
+
+  .hand-stage{position:relative; aspect-ratio:1/1; border-radius:24px; background:linear-gradient(160deg, rgba(125,148,181,0.14), rgba(194,149,145,0.14)); border:1px solid var(--border); overflow:hidden; box-shadow:var(--shadow-lg); transition:transform .1s ease-out;}
+  .hand-stage svg{width:100%; height:100%;}
+  .node{fill:var(--maroon);}
+  .bone{stroke:url(#boneGrad); stroke-width:1.4; fill:none; opacity:.75;}
+  .pulse-node{animation:pulseNode 2.6s ease-in-out infinite;}
+  @keyframes pulseNode{0%,100%{r:3.1; opacity:1;} 50%{r:4.4; opacity:.55;}}
+  .scanline{position:absolute; left:6%; right:6%; height:1px; background:linear-gradient(90deg, transparent, var(--rose), transparent); animation:scan 3.2s ease-in-out infinite; opacity:.8;}
+  @keyframes scan{0%{top:12%;} 50%{top:85%;} 100%{top:12%;}}
+  .hand-caption{position:absolute; bottom:14px; left:14px; right:14px; display:flex; justify-content:space-between; align-items:center; font-family:'JetBrains Mono'; font-size:10.5px; color:var(--text-faint);}
+  .hand-caption .live{display:flex; align-items:center; gap:6px; color:var(--maroon);}
+  .hand-caption .live::before{content:''; width:6px; height:6px; border-radius:50%; background:var(--maroon); animation:blink 1.6s infinite;}
+  @keyframes blink{50%{opacity:.25;}}
+
+  section.block{padding:60px 40px; max-width:1080px; margin:0 auto; border-top:1px solid var(--border);}
+  .kicker{font-size:11.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--text-faint); font-weight:600; margin-bottom:14px;}
+  section.block h2{font-size:clamp(24px,3vw,32px); font-weight:500; max-width:640px;}
+  section.block p.sub{color:var(--text-dim); font-size:15px; line-height:1.7; max-width:620px; margin-top:14px;}
+
+  .compare{display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:36px;}
+  .compare .card{border:1px solid var(--border); border-radius:var(--radius); padding:24px; background:var(--bg-panel); box-shadow:var(--shadow-sm); transition:box-shadow .2s ease, transform .2s ease;}
+  .compare .card:hover{box-shadow:var(--shadow-md); transform:translateY(-2px);}
+  .compare .card.bad{border-color:rgba(112,63,55,0.3);}
+  .compare .card.good{border-color:rgba(125,148,181,0.4);}
+  .compare .tag{font-size:11px; letter-spacing:.08em; text-transform:uppercase; font-weight:700;}
+  .compare .card.bad .tag{color:var(--maroon);}
+  .compare .card.good .tag{color:var(--blue);}
+  .compare .card p{margin-top:12px; color:var(--text-dim); font-size:14.5px; line-height:1.65;}
+  .miniflow{font-family:'JetBrains Mono'; font-size:12px; color:var(--text-dim); margin-top:14px; line-height:1.9;}
+
+  /* ---------- Carousel ---------- */
+  .carousel-wrap{margin-top:34px;}
+  .carousel-track{position:relative; min-height:400px; overflow:hidden;}
+  .slide{position:absolute; inset:0; opacity:0; transform:translateX(40px); transition:opacity .45s ease, transform .45s ease; pointer-events:none;}
+  .slide.active{position:relative; opacity:1; transform:translateX(0); pointer-events:auto;}
+  .slide.exit-left{transform:translateX(-40px);}
+  .slide-eyebrow{font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--text-faint); font-weight:600; margin-bottom:10px;}
+  .slide h3.big{font-size:24px; font-weight:500; margin-bottom:16px;}
+
+  .mv-row{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:26px;}
+  .mv-row.three{grid-template-columns:1fr 1fr 1fr;}
+  .mv-card{border-left:2px solid var(--maroon); padding-left:16px; transition:border-color .2s;}
+  .mv-card .lbl{font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--maroon); font-weight:700; margin-bottom:6px;}
+  .mv-card p{font-size:14.5px; color:var(--text-dim); line-height:1.6;}
+
+  .pipeline{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:6px;}
+  .pipe-card{border:1px solid var(--border); border-radius:14px; padding:20px 18px; background:var(--bg-panel); box-shadow:var(--shadow-sm); transition:transform .2s ease, box-shadow .2s ease;}
+  .pipe-card:hover{transform:translateY(-3px); box-shadow:var(--shadow-md);}
+  .pipe-card .num{font-family:'JetBrains Mono'; font-size:11px; color:var(--maroon);}
+  .pipe-card h3{font-size:15px; margin-top:10px; font-weight:600; font-family:'Work Sans';}
+  .pipe-card p{font-size:12.5px; color:var(--text-dim); margin-top:7px; line-height:1.55;}
+
+  .modgrid{display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:6px;}
+  .modcard{border:1px solid var(--border); border-radius:var(--radius); padding:22px; background:var(--bg-panel); box-shadow:var(--shadow-sm); transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease;}
+  .modcard:hover{transform:translateY(-4px); border-color:var(--maroon); box-shadow:var(--shadow-lg);}
+  .modcard .icon{width:34px; height:34px; border-radius:9px; background:linear-gradient(135deg, rgba(125,148,181,.3), rgba(194,149,145,.35)); display:flex; align-items:center; justify-content:center; margin-bottom:14px;}
+  .modcard .icon svg{width:16px; height:16px; color:var(--maroon);}
+  .modcard h3{font-size:15px; font-weight:600; font-family:'Work Sans';}
+  .modcard p{font-size:13px; color:var(--text-dim); margin-top:8px; line-height:1.6;}
+
+  .limlist{margin-top:6px; display:flex; flex-direction:column;}
+  .limlist li{list-style:none; display:flex; gap:12px; padding:14px 0; border-bottom:1px solid var(--border); font-size:14px; color:var(--text-dim);}
+  .limlist li::before{content:'-'; color:var(--text-faint); flex-shrink:0;}
+
+  .carousel-nav{display:flex; align-items:center; justify-content:space-between; margin-top:28px;}
+  .dots{display:flex; gap:8px;}
+  .dot{width:8px; height:8px; border-radius:50%; background:var(--border); cursor:pointer; border:none; padding:0; transition:all .2s;}
+  .dot.on{background:var(--maroon); width:22px; border-radius:5px;}
+  .arrow-btn{width:40px; height:40px; border-radius:50%; border:1px solid var(--border); background:var(--bg-panel); cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--text-dim); transition:all .18s; box-shadow:var(--shadow-sm);}
+  .arrow-btn:hover{border-color:var(--maroon); color:var(--maroon); transform:translateY(-1px); box-shadow:var(--shadow-md);}
+  .arrow-btn:active{transform:scale(.94);}
+  .arrow-pair{display:flex; gap:8px;}
+
+  footer{padding:40px; text-align:center; color:var(--text-faint); font-size:12.5px; border-top:1px solid var(--border);}
+
+  /* ---------- Forms ---------- */
+  .form-wrap{max-width:560px; margin:0 auto; padding:70px 40px;}
+  .field{margin-bottom:20px;}
+  .field label{display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:7px; font-weight:500;}
+  .field input, .field textarea, .field select{
+    width:100%; background:var(--bg-panel); border:1px solid var(--border); border-radius:10px;
+    padding:12px 14px; color:var(--text); font-family:inherit; font-size:14px; transition:border-color .15s, box-shadow .15s;
+  }
+  .field input:focus, .field textarea:focus{border-color:var(--maroon); outline:none; box-shadow:0 0 0 4px rgba(112,63,55,0.12);}
+  .field textarea{resize:vertical; min-height:110px;}
+  .err{color:var(--maroon); font-size:12px; margin-top:6px; display:none;}
+  .field.invalid input, .field.invalid textarea{border-color:var(--maroon);}
+  .field.invalid .err{display:block;}
+  .successbox{display:none; text-align:center; padding:40px 30px; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg-panel); box-shadow:var(--shadow-md);}
+  .successbox.show{display:block; animation:fadein .5s ease;}
+  .check{width:52px; height:52px; border-radius:50%; margin:0 auto 18px; background:var(--sage); display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow-md);}
+  .check svg path{stroke-dasharray:24; stroke-dashoffset:24; animation:draw .5s ease forwards .15s;}
+  @keyframes draw{to{stroke-dashoffset:0;}}
+  .saved-note{font-size:11.5px; color:var(--text-faint); margin-top:14px;}
+
+  .stars{display:flex; gap:8px; margin-top:8px;}
+  .stars button{background:none; border:none; cursor:pointer; font-size:26px; color:var(--text-faint); transition:color .12s, transform .15s; line-height:1; padding:2px;}
+  .stars button.on{color:var(--maroon); transform:scale(1.15);}
+  .stars button:hover{transform:scale(1.2);}
+  .chipwrap{display:flex; gap:9px; flex-wrap:wrap; margin-top:8px;}
+  .chip{padding:9px 15px; border-radius:20px; border:1px solid var(--border); background:var(--bg-panel); font-size:13px; color:var(--text-dim); cursor:pointer; transition:all .15s;}
+  .chip.on{background:var(--maroon); color:#fff; border-color:transparent; transform:scale(1.04);}
+  .chip:active{transform:scale(.96);}
+
+  /* ---------- Chatbox ---------- */
+  .chat-toggle{position:fixed; bottom:26px; right:26px; z-index:60; width:58px; height:58px; border-radius:50%; background:var(--bg-panel); border:1px solid var(--border); cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow-lg); transition:transform .2s ease; animation:chatBreathe 4s ease-in-out infinite;}
+  @keyframes chatBreathe{0%,100%{transform:scale(1);} 50%{transform:scale(1.045);}}
+  .chat-toggle:hover{transform:scale(1.1); animation-play-state:paused;}
+  .chat-toggle svg{width:34px; height:34px;}
+  .chat-panel{position:fixed; bottom:96px; right:26px; z-index:60; width:340px; max-height:460px; border-radius:18px; background:var(--bg-panel); backdrop-filter:blur(18px); border:1px solid var(--border); display:none; flex-direction:column; box-shadow:var(--shadow-lg); overflow:hidden;}
+  .chat-panel.open{display:flex; animation:fadein .3s ease;}
+  .chat-head{padding:15px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px;}
+  .chat-head .avatar{width:28px; height:28px; flex-shrink:0;}
+  .chat-head strong{font-size:13.5px; font-weight:600;}
+  .chat-head span{display:block; font-size:11px; color:var(--text-faint);}
+  .chat-body{flex:1; overflow-y:auto; padding:14px 16px; display:flex; flex-direction:column; gap:10px; max-height:280px;}
+  .msg{font-size:13px; line-height:1.5; padding:9px 12px; border-radius:11px; max-width:85%; animation:fadein .3s ease;}
+  .msg.bot{background:var(--surface); border:1px solid var(--border); align-self:flex-start; color:var(--text-dim);}
+  .msg.user{background:var(--maroon); align-self:flex-end; color:#fff;}
+  .typing{display:flex; gap:4px; align-self:flex-start; padding:9px 12px;}
+  .typing span{width:6px; height:6px; border-radius:50%; background:var(--text-faint); animation:typingDot 1.1s infinite;}
+  .typing span:nth-child(2){animation-delay:.15s;} .typing span:nth-child(3){animation-delay:.3s;}
+  @keyframes typingDot{0%,60%,100%{transform:translateY(0); opacity:.4;} 30%{transform:translateY(-4px); opacity:1;}}
+  .chat-input{display:flex; gap:8px; padding:12px; border-top:1px solid var(--border);}
+  .chat-input input{flex:1; background:var(--surface); border:1px solid var(--border); border-radius:9px; padding:9px 11px; color:var(--text); font-size:13px; font-family:inherit;}
+  .chat-input button{background:var(--maroon); border:none; border-radius:9px; padding:0 14px; color:#fff; cursor:pointer; font-size:13px; transition:transform .15s;}
+  .chat-input button:active{transform:scale(.93);}
+  .chat-quick{display:flex; gap:6px; padding:0 12px 12px; flex-wrap:wrap;}
+  .chat-quick button{font-size:11px; padding:6px 10px; border-radius:14px; border:1px solid var(--border); background:transparent; color:var(--text-faint); cursor:pointer; transition:all .15s;}
+  .chat-quick button:hover{color:var(--text-dim); border-color:var(--maroon); transform:translateY(-1px);}
+
+  @media (max-width: 880px){
+    .sidebar{width:64px;}
+    .sidebar .navlink span{display:none;}
+    .hero{grid-template-columns:1fr; padding:56px 22px;}
+    .topbar{padding:16px 22px;}
+    section.block{padding:48px 22px;}
+    .compare, .modgrid, .mv-row{grid-template-columns:1fr;}
+    .pipeline{grid-template-columns:1fr 1fr;}
+    .form-wrap{padding:46px 22px;}
+    .chat-panel{width:calc(100vw - 32px); right:16px;}
+    .chat-toggle{right:16px;}
+    .mv-row.three{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash">
+  <div class="streaks">
+    <span style="animation-delay:0s"></span><span style="animation-delay:.3s"></span><span style="animation-delay:.6s"></span>
+    <span style="animation-delay:.9s"></span><span style="animation-delay:1.2s"></span><span style="animation-delay:1.5s"></span>
+    <span style="animation-delay:1.8s"></span><span style="animation-delay:2.1s"></span><span style="animation-delay:2.4s"></span>
+    <span style="animation-delay:2.7s"></span><span style="animation-delay:.15s"></span><span style="animation-delay:.45s"></span>
+  </div>
+  <div class="content">
+    <svg class="splash-logo" viewBox="0 0 64 64" fill="none">
+      <circle cx="32" cy="34" r="18" fill="#F5EFE6" stroke="#3A281F" stroke-width="2"/>
+      <path d="M17 22 L23 30 L14 32 Z" fill="#F5EFE6" stroke="#3A281F" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M47 22 L41 30 L50 32 Z" fill="#F5EFE6" stroke="#3A281F" stroke-width="2" stroke-linejoin="round"/>
+      <circle cx="26" cy="33" r="1.6" fill="#3A281F"/>
+      <circle cx="38" cy="33" r="1.6" fill="#3A281F"/>
+      <path d="M30.5 38 Q32 40 33.5 38" stroke="#3A281F" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+      <g transform="translate(38,10) rotate(18)">
+        <rect x="0" y="6" width="4" height="12" rx="2" fill="#C29591"/>
+        <rect x="5" y="2" width="4" height="16" rx="2" fill="#C29591"/>
+        <rect x="10" y="6" width="4" height="12" rx="2" fill="#C29591"/>
+        <rect x="1" y="14" width="12" height="9" rx="4.5" fill="#C29591"/>
+      </g>
+    </svg>
+    <h1>SignSpeak</h1>
+    <p>sign it and they'll see it</p>
+    <div class="splash-rule"></div>
+  </div>
+  <button class="skip" id="skipSplash">enter</button>
+</div>
+
+<div class="shell">
+  <!-- SIDEBAR -->
+  <nav class="sidebar" aria-label="Primary">
+    <div class="mark" aria-hidden="true">
+      <svg viewBox="0 0 64 64" fill="none">
+        <circle cx="32" cy="34" r="18" fill="#fff" stroke="#703F37" stroke-width="2"/>
+        <path d="M17 22 L23 30 L14 32 Z" fill="#fff" stroke="#703F37" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M47 22 L41 30 L50 32 Z" fill="#fff" stroke="#703F37" stroke-width="2" stroke-linejoin="round"/>
+        <circle cx="26" cy="33" r="1.6" fill="#703F37"/>
+        <circle cx="38" cy="33" r="1.6" fill="#703F37"/>
+        <path d="M30.5 38 Q32 40 33.5 38" stroke="#703F37" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+        <g transform="translate(38,10) rotate(18)">
+          <rect x="0" y="6" width="4" height="12" rx="2" fill="#703F37"/>
+          <rect x="5" y="2" width="4" height="16" rx="2" fill="#703F37"/>
+          <rect x="10" y="6" width="4" height="12" rx="2" fill="#703F37"/>
+          <rect x="1" y="14" width="12" height="9" rx="4.5" fill="#703F37"/>
+        </g>
+      </svg>
+    </div>
+    <div class="navlinks">
+      <a class="navlink active" data-view="about" href="#about" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c1.2-4 4-6 7-6s5.8 2 7 6"/></svg>
+        <span>About</span>
+      </a>
+      <a class="navlink" data-view="contact" href="#contact">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><path d="M4 7l8 6 8-6"/></svg>
+        <span>Contact</span>
+      </a>
+      <a class="navlink" data-view="feedback" href="#feedback">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 17.3 5.9 21l1.5-6.9L2 9.6l7-.6L12 2.5l3 6.5 7 .6-5.4 4.5L18.1 21z"/></svg>
+        <span>Feedback</span>
+      </a>
+    </div>
+    <div class="foot">SIGNSPEAK</div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="topbar">
+      <div class="brand">
+        <svg class="mini-logo" viewBox="0 0 64 64" fill="none">
+          <circle cx="32" cy="34" r="18" fill="#FDFAF5" stroke="#703F37" stroke-width="2"/>
+          <path d="M17 22 L23 30 L14 32 Z" fill="#FDFAF5" stroke="#703F37" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M47 22 L41 30 L50 32 Z" fill="#FDFAF5" stroke="#703F37" stroke-width="2" stroke-linejoin="round"/>
+          <circle cx="26" cy="33" r="1.6" fill="#703F37"/>
+          <circle cx="38" cy="33" r="1.6" fill="#703F37"/>
+          <path d="M30.5 38 Q32 40 33.5 38" stroke="#703F37" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+        </svg>
+        SignSpeak
+      </div>
+      <div class="cta-row">
+        <button class="btn" id="openLogin">Log in</button>
+      </div>
+    </div>
+
+    <!-- ============ ABOUT VIEW ============ -->
+    <section class="view active" id="view-about">
+
+      <div class="hero">
+        <div>
+          <div class="eyebrow">Accessibility &middot; Live in Google Meet</div>
+          <h1>Sign a word.<br>They hear a <span class="grad">sentence.</span></h1>
+          <p class="lede">SignSpeak watches your hands, not just your screen. It turns recognized sign language into spoken words that reach the other person in your call, in real time, without a cloud subscription.</p>
+          <div class="actions">
+            <a class="btn btn-primary" href="#feedback" data-view-link="feedback">Share feedback</a>
+            <a class="btn" href="#about-carousel" id="seeHow">See how it works</a>
+          </div>
+          <div class="flowchip">
+            <span class="step">Sign</span><span class="arrow">&rarr;</span>
+            <span class="step">Landmarks</span><span class="arrow">&rarr;</span>
+            <span class="step">Text</span><span class="arrow">&rarr;</span>
+            <span class="step">Speech</span><span class="arrow">&rarr;</span>
+            <span class="step">Meet Audio</span>
+          </div>
+        </div>
+
+        <div class="hand-stage" id="handStage" aria-hidden="true">
+          <svg viewBox="0 0 320 320">
+            <defs>
+              <linearGradient id="boneGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#7D94B5"/>
+                <stop offset="100%" stop-color="#C29591"/>
+              </linearGradient>
+            </defs>
+            <g id="handGraph">
+              <!-- wrist -> thumb (CMC, MCP, IP, TIP) -->
+              <path class="bone" d="M160,270 L128,250 L100,225 L80,200 L65,180"/>
+              <!-- wrist -> index (MCP, PIP, DIP, TIP) -->
+              <path class="bone" d="M160,270 L135,190 L130,150 L127,115 L124,85"/>
+              <!-- index MCP -> middle (MCP, PIP, DIP, TIP) -->
+              <path class="bone" d="M135,190 L162,180 L163,135 L164,95 L165,60"/>
+              <!-- middle MCP -> ring (MCP, PIP, DIP, TIP) -->
+              <path class="bone" d="M162,180 L188,185 L193,140 L197,102 L200,70"/>
+              <!-- ring MCP -> pinky (MCP, PIP, DIP, TIP) -->
+              <path class="bone" d="M188,185 L212,195 L222,158 L230,128 L236,102"/>
+              <!-- palm closing: wrist -> pinky MCP -->
+              <path class="bone" d="M160,270 L212,195"/>
+            </g>
+            <g id="handNodes">
+              <circle class="node pulse-node" cx="160" cy="270" r="4"/>
+              <circle class="node pulse-node" cx="128" cy="250" r="3"/>
+              <circle class="node pulse-node" cx="100" cy="225" r="3"/>
+              <circle class="node pulse-node" cx="80" cy="200" r="3"/>
+              <circle class="node pulse-node" cx="65" cy="180" r="3"/>
+              <circle class="node pulse-node" cx="135" cy="190" r="3"/>
+              <circle class="node pulse-node" cx="130" cy="150" r="3"/>
+              <circle class="node pulse-node" cx="127" cy="115" r="3"/>
+              <circle class="node pulse-node" cx="124" cy="85" r="3"/>
+              <circle class="node pulse-node" cx="162" cy="180" r="3"/>
+              <circle class="node pulse-node" cx="163" cy="135" r="3"/>
+              <circle class="node pulse-node" cx="164" cy="95" r="3"/>
+              <circle class="node pulse-node" cx="165" cy="60" r="3"/>
+              <circle class="node pulse-node" cx="188" cy="185" r="3"/>
+              <circle class="node pulse-node" cx="193" cy="140" r="3"/>
+              <circle class="node pulse-node" cx="197" cy="102" r="3"/>
+              <circle class="node pulse-node" cx="200" cy="70" r="3"/>
+              <circle class="node pulse-node" cx="212" cy="195" r="3"/>
+              <circle class="node pulse-node" cx="222" cy="158" r="3"/>
+              <circle class="node pulse-node" cx="230" cy="128" r="3"/>
+              <circle class="node pulse-node" cx="236" cy="102" r="3"/>
+            </g>
+          </svg>
+          <div class="scanline"></div>
+          <div class="hand-caption">
+            <span class="live">21 landmarks tracked</span>
+            <span class="mono">A-Y classifier &middot; local</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- PROBLEM / SOLUTION -->
+      <section class="block reveal" id="problem">
+        <div class="kicker">Why this exists</div>
+        <h2>Recognized text on your own screen doesn't close the gap.</h2>
+        <p class="sub">In a typical call, if you sign and only you can read the transcript, the other person still can't follow you. The barrier moves, it doesn't disappear.</p>
+        <div class="compare">
+          <div class="card bad">
+            <div class="tag">Without it</div>
+            <div class="miniflow">Signing user &rarr; ASL &rarr; text shown locally<br>Other participant &rarr; still lost</div>
+          </div>
+          <div class="card good">
+            <div class="tag">With SignSpeak</div>
+            <div class="miniflow">ASL sign &rarr; landmarks &rarr; ML classify<br>&rarr; text &rarr; speech &rarr; into the meeting audio</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CAROUSEL -->
+      <section class="block reveal" id="about-carousel">
+        <div class="kicker">About SignSpeak</div>
+        <h2>Everything you need to know.</h2>
+
+        <div class="carousel-wrap">
+          <div class="carousel-track">
+
+            <div class="slide active" data-slide="0">
+              <div class="slide-eyebrow">01 &middot; Mission, Vision &amp; SDG Alignment</div>
+              <div class="mv-row three">
+                <div class="mv-card">
+                  <div class="lbl">Mission</div>
+                  <p>Make video calls understandable in both directions, for the person signing and the person listening.</p>
+                </div>
+                <div class="mv-card">
+                  <div class="lbl">Vision</div>
+                  <p>A world where sign language is never the reason a conversation stalls, in a meeting or anywhere else.</p>
+                </div>
+                <div class="mv-card">
+                  <div class="lbl" style="display:flex; align-items:center; gap:8px;"><img src="data:image/webp;base64,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" alt="UN SDG 10 icon" style="width:26px; height:26px; border-radius:5px;"> SDG 10</div>
+                  <p>SignSpeak lowers a real communication barrier for Deaf and hard-of-hearing participants in everyday video calls, aligning with the UN's goal of reduced inequalities.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="slide" data-slide="1">
+              <div class="slide-eyebrow">02 &middot; How Detection Works</div>
+              <h3 class="big">Your camera, MediaPipe, and a model trained on 25 letters.</h3>
+              <p class="sub" style="margin-top:-8px; margin-bottom:22px;">Everything runs through a local detection server on your own machine, so no signing data leaves your computer to reach the model.</p>
+              <div class="pipeline">
+                <div class="pipe-card"><div class="num">01</div><h3>Capture</h3><p>The camera watches your hand while MediaPipe extracts 21 hand landmarks per frame.</p></div>
+                <div class="pipe-card"><div class="num">02</div><h3>Normalize</h3><p>Landmarks are made wrist-relative and scale-normalized into 63 numerical features.</p></div>
+                <div class="pipe-card"><div class="num">03</div><h3>Classify</h3><p>A local Random Forest model, served at 127.0.0.1:8765, predicts the ASL letter, A through Y.</p></div>
+                <div class="pipe-card"><div class="num">04</div><h3>Speak</h3><p>Stable letters accumulate into text, then convert to speech routed toward the meeting audio.</p></div>
+              </div>
+            </div>
+
+            <div class="slide" data-slide="2">
+              <div class="slide-eyebrow">03 &middot; What's Inside the Extension</div>
+              <h3 class="big">One extension, four working parts.</h3>
+              <div class="modgrid">
+                <div class="modcard"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div><h3>Google Meet integration</h3><p>Sits alongside your Meet call and provides detection and speech controls without leaving the tab.</p></div>
+                <div class="modcard"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 3v9l6 3"/></svg></div><h3>AI chatbot</h3><p>Matches common questions against a 50+ item knowledge base first, then falls back to Chrome's on-device AI.</p></div>
+                <div class="modcard"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h5"/></svg></div><h3>Privacy by default</h3><p>The extension takes the necessary permissions and the meeting data is not shipped unnecessarily.</p></div>
+              </div>
+            </div>
+
+            <div class="slide" data-slide="3">
+              <div class="slide-eyebrow">04 &middot; Honest About Scope</div>
+              <h3 class="big">What it does today, and what it doesn't yet.</h3>
+              <ul class="limlist">
+                <li>Covers the A-Y letter set, not unrestricted natural ASL sentence understanding.</li>
+                <li>Reliable remote speech depends on correct OS/browser audio routing into the meeting microphone.</li>
+                <li>Chrome on-device AI behavior can vary by browser version, hardware, and configuration.</li>
+                <li>Image and voice chatbot features depend on local browser capabilities being available.</li>
+                <li>Real ASL includes movement and expression far beyond what a letter classifier captures.</li>
+              </ul>
+            </div>
+
+          </div>
+
+          <div class="carousel-nav">
+            <div class="dots" id="dots">
+              <button class="dot on" data-i="0"></button>
+              <button class="dot" data-i="1"></button>
+              <button class="dot" data-i="2"></button>
+              <button class="dot" data-i="3"></button>
+            </div>
+            <div class="arrow-pair">
+              <button class="arrow-btn" id="prevSlide" aria-label="Previous slide">&larr;</button>
+              <button class="arrow-btn" id="nextSlide" aria-label="Next slide">&rarr;</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        SignSpeak, an accessibility project for real-time sign-language communication.<br>
+        <a href="#contact" data-view-link="contact">Contact</a> &middot; <a href="#feedback" data-view-link="feedback">Feedback</a>
+      </footer>
+    </section>
+
+    <!-- ============ CONTACT VIEW ============ -->
+    <section class="view" id="view-contact">
+      <div class="form-wrap">
+        <div class="kicker">Get in touch</div>
+        <h2 class="display" style="font-size:28px;font-weight:500;">Contact us</h2>
+        <p class="sub" style="margin-bottom:20px;">Questions about the extension, a bug to report, or interest in the learning platform, send it over.</p>
+
+        <form id="contactForm" novalidate>
+          <div class="field" id="f-name">
+            <label for="c-name">Name</label>
+            <input id="c-name" name="name" type="text" placeholder="Your full name">
+            <div class="err">Please enter your name.</div>
+          </div>
+          <div class="field" id="f-email">
+            <label for="c-email">Email</label>
+            <input id="c-email" name="email" type="email" placeholder="you@example.com">
+            <div class="err">Enter a valid email address.</div>
+          </div>
+          <div class="field" id="f-subject">
+            <label for="c-subject">Subject</label>
+            <select id="c-subject" name="subject">
+              <option value="">Select a topic</option>
+              <option>General question</option>
+              <option>Bug report</option>
+              <option>Extension not detecting signs</option>
+              <option>Learning platform</option>
+              <option>Partnership / press</option>
+            </select>
+            <div class="err">Please choose a subject.</div>
+          </div>
+          <div class="field" id="f-message">
+            <label for="c-message">Message</label>
+            <textarea id="c-message" name="message" placeholder="Tell us what's going on..."></textarea>
+            <div class="err">Message should be at least 10 characters.</div>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%; padding:13px;">Send message</button>
+        </form>
+
+        <div class="successbox" id="contactSuccess">
+          <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4"><path d="M5 13l4 4L19 7"/></svg></div>
+          <h3 style="font-size:17px; font-weight:600; font-family:'Work Sans';">Message sent</h3>
+          <p style="color:var(--text-dim); font-size:13.5px; margin-top:8px;">We'll get back to you soon.</p>
+          <p class="saved-note">Saved as a .json file to your downloads.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ FEEDBACK VIEW ============ -->
+    <section class="view" id="view-feedback">
+      <div class="form-wrap">
+        <div class="kicker">Help us improve</div>
+        <h2 class="display" style="font-size:28px;font-weight:500;">Feedback</h2>
+        <p class="sub" style="margin-bottom:20px;">Rate the extension, tell us what's working, and what isn't.</p>
+
+        <form id="feedbackForm">
+          <div class="field">
+            <label>Overall rating</label>
+            <div class="stars" id="starRow">
+              <button type="button" data-v="1">&#9733;</button>
+              <button type="button" data-v="2">&#9733;</button>
+              <button type="button" data-v="3">&#9733;</button>
+              <button type="button" data-v="4">&#9733;</button>
+              <button type="button" data-v="5">&#9733;</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Category</label>
+            <div class="chipwrap" id="catRow">
+              <div class="chip" data-c="Bug">Bug</div>
+              <div class="chip" data-c="Feature Request">Feature Request</div>
+              <div class="chip" data-c="Design">Design</div>
+              <div class="chip" data-c="Speech Accuracy">Speech Accuracy</div>
+              <div class="chip" data-c="Detection Accuracy">Detection Accuracy</div>
+              <div class="chip" data-c="Praise">Praise</div>
+            </div>
+          </div>
+          <div class="field">
+            <label for="fb-text">What can we improve?</label>
+            <textarea id="fb-text" placeholder="Share details, steps to reproduce, or ideas..."></textarea>
+          </div>
+          <div class="field" style="display:flex; align-items:center; gap:9px;">
+            <input type="checkbox" id="fb-optin" style="width:auto;">
+            <label for="fb-optin" style="margin:0; font-size:13px;">Okay to contact me about this feedback</label>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%; padding:13px;">Submit feedback</button>
+        </form>
+
+        <div class="successbox" id="feedbackSuccess">
+          <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4"><path d="M5 13l4 4L19 7"/></svg></div>
+          <h3 style="font-size:17px; font-weight:600; font-family:'Work Sans';">Thank you!</h3>
+          <p style="color:var(--text-dim); font-size:13.5px; margin-top:8px;">Your feedback helps shape what we build next.</p>
+          <p class="saved-note">Saved as a .json file to your downloads.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- CHATBOX -->
+<button class="chat-toggle" id="chatToggle" aria-label="Open chat assistant">
+  <svg viewBox="0 0 64 64" fill="none">
+    <circle cx="32" cy="32" r="30" fill="#703F37"/>
+    <line x1="32" y1="10" x2="32" y2="16" stroke="#F5EFE6" stroke-width="2.4" stroke-linecap="round"/>
+    <circle cx="32" cy="8" r="2.6" fill="#F5EFE6"/>
+    <rect x="16" y="17" width="32" height="26" rx="13" fill="#F5EFE6"/>
+    <rect x="21" y="24" width="22" height="15" rx="7.5" fill="#C29591"/>
+    <circle cx="27.5" cy="31.5" r="2.6" fill="#3A281F"/>
+    <circle cx="36.5" cy="31.5" r="2.6" fill="#3A281F"/>
+    <rect x="14" y="30" width="4" height="8" rx="2" fill="#F5EFE6"/>
+    <rect x="46" y="30" width="4" height="8" rx="2" fill="#F5EFE6"/>
+  </svg>
+</button>
+<div class="chat-panel" id="chatPanel" role="dialog" aria-label="SignSpeak chat">
+  <div class="chat-head">
+    <svg class="avatar" viewBox="0 0 64 64" fill="none">
+      <circle cx="32" cy="32" r="30" fill="#703F37"/>
+      <line x1="32" y1="10" x2="32" y2="16" stroke="#F5EFE6" stroke-width="2.4" stroke-linecap="round"/>
+      <circle cx="32" cy="8" r="2.6" fill="#F5EFE6"/>
+      <rect x="16" y="17" width="32" height="26" rx="13" fill="#F5EFE6"/>
+      <rect x="21" y="24" width="22" height="15" rx="7.5" fill="#C29591"/>
+      <circle cx="27.5" cy="31.5" r="2.6" fill="#3A281F"/>
+      <circle cx="36.5" cy="31.5" r="2.6" fill="#3A281F"/>
+    </svg>
+    <div><strong>Assistant</strong><span>Usually answers instantly</span></div>
+  </div>
+  <div class="chat-body" id="chatBody">
+    <div class="msg bot">Hi! Ask me about setup, sign detection, or the learning site. I'll answer from our FAQ first.</div>
+  </div>
+  <div class="chat-quick">
+    <button data-q="setup">How do I set it up?</button>
+    <button data-q="letters">Which letters work?</button>
+    <button data-q="hear">Can others hear me?</button>
+  </div>
+  <div class="chat-input">
+    <input id="chatInput" type="text" placeholder="Type a question...">
+    <button id="chatSend">Send</button>
+  </div>
+</div>
+
+<!-- LOGIN / SIGNUP MODAL -->
+<div id="authOverlay" style="display:none; position:fixed; inset:0; z-index:80; background:rgba(58,40,31,0.45); backdrop-filter:blur(6px); align-items:center; justify-content:center; padding:20px;">
+  <div style="width:100%; max-width:400px; background:var(--bg-panel); border:1px solid var(--border); border-radius:18px; padding:30px; position:relative; box-shadow:var(--shadow-lg);">
+    <button id="closeAuth" style="position:absolute; top:16px; right:18px; background:none; border:none; color:var(--text-faint); font-size:18px; cursor:pointer;">&times;</button>
+    <div style="display:flex; gap:8px; margin-bottom:20px;">
+      <button class="btn authTab on" data-tab="login" style="flex:1;">Log in</button>
+      <button class="btn authTab" data-tab="signup" style="flex:1;">Sign up</button>
+    </div>
+    <div class="field"><label>Email</label><input type="email" id="auth-email" placeholder="you@example.com"></div>
+    <div class="field"><label>Password</label><input type="password" id="auth-password" placeholder="********"></div>
+    <div class="err" id="authErr" style="display:none;">Enter an email and a password (min 6 characters).</div>
+    <button class="btn btn-primary" style="width:100%; padding:12px; margin-top:6px;" id="authSubmit">Continue</button>
+  </div>
+</div>
+
+<script>
+// ---------- Splash ----------
+const splash = document.getElementById('splash');
+function dismissSplash(){ splash.classList.add('hide'); }
+setTimeout(dismissSplash, 3200);
+document.getElementById('skipSplash').addEventListener('click', dismissSplash);
+
+// ---------- View routing ----------
+const links = document.querySelectorAll('[data-view]');
+const viewLinks = document.querySelectorAll('[data-view-link]');
+function setView(name){
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  links.forEach(l => l.classList.toggle('active', l.dataset.view === name));
+  window.scrollTo({top:0, behavior:'instant'});
+}
+links.forEach(l => l.addEventListener('click', e => { e.preventDefault(); setView(l.dataset.view); history.replaceState(null,'','#'+l.dataset.view); }));
+viewLinks.forEach(l => l.addEventListener('click', e => { e.preventDefault(); setView(l.dataset.viewLink); history.replaceState(null,'','#'+l.dataset.viewLink); }));
+document.getElementById('seeHow').addEventListener('click', e => {
+  e.preventDefault();
+  document.getElementById('about-carousel').scrollIntoView({behavior:'smooth', block:'start'});
+});
+window.addEventListener('load', () => {
+  const h = location.hash.replace('#','');
+  if (['about','contact','feedback'].includes(h)) setView(h);
+});
+
+// ---------- Scroll reveal microinteraction ----------
+const revealEls = document.querySelectorAll('.reveal');
+const io = new IntersectionObserver(entries => {
+  entries.forEach(en => { if (en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); } });
+}, {threshold:0.12});
+revealEls.forEach(el => io.observe(el));
+
+// ---------- Hero hand parallax microinteraction ----------
+const handStage = document.getElementById('handStage');
+handStage.addEventListener('mousemove', e => {
+  const r = handStage.getBoundingClientRect();
+  const x = ((e.clientX - r.left) / r.width - 0.5) * 10;
+  const y = ((e.clientY - r.top) / r.height - 0.5) * 10;
+  handStage.style.transform = 'rotateY(' + x + 'deg) rotateX(' + (-y) + 'deg)';
+});
+handStage.addEventListener('mouseleave', () => { handStage.style.transform = 'rotateY(0) rotateX(0)'; });
+
+// ---------- Carousel (directional slide transition) ----------
+const slides = document.querySelectorAll('.slide');
+const dots = document.querySelectorAll('.dot');
+let slideIdx = 0;
+function showSlide(i){
+  const newIdx = (i + slides.length) % slides.length;
+  if (newIdx === slideIdx) return;
+  slides.forEach(s => { if (parseInt(s.dataset.slide) === slideIdx) s.classList.add('exit-left'); });
+  setTimeout(() => {
+    slides.forEach(s => s.classList.remove('active','exit-left'));
+    slides.forEach(s => { if (parseInt(s.dataset.slide) === newIdx) s.classList.add('active'); });
+    dots.forEach(d => d.classList.toggle('on', parseInt(d.dataset.i) === newIdx));
+    slideIdx = newIdx;
+  }, 30);
+}
+document.getElementById('nextSlide').addEventListener('click', () => showSlide(slideIdx + 1));
+document.getElementById('prevSlide').addEventListener('click', () => showSlide(slideIdx - 1));
+dots.forEach(d => d.addEventListener('click', () => showSlide(parseInt(d.dataset.i))));
+
+// ---------- JSON utilities: save to localStorage AND download as a .json file ----------
+function hashPassword(str){
+  // Synchronous hash (cyrb53) - works in any context, including file:// previews
+  // where the Web Crypto API is unavailable, so sign up never silently fails.
+  let h1 = 0xdeadbeef ^ 0, h2 = 0x41c6ce57 ^ 0;
+  for (let i = 0; i < str.length; i++){
+    const ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16);
+}
+function makeUUID(){
+  if (crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+function store(key, entry){
+  const arr = JSON.parse(localStorage.getItem(key) || '[]');
+  arr.push(entry);
+  localStorage.setItem(key, JSON.stringify(arr));
+}
+function downloadJSON(filename, obj){
+  const blob = new Blob([JSON.stringify(obj, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ---------- Contact form ----------
+const contactForm = document.getElementById('contactForm');
+contactForm.addEventListener('submit', e => {
+  e.preventDefault();
+  const name = document.getElementById('c-name');
+  const email = document.getElementById('c-email');
+  const subject = document.getElementById('c-subject');
+  const message = document.getElementById('c-message');
+
+  toggleField('f-name', name.value.trim().length > 1);
+  toggleField('f-email', /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim()));
+  toggleField('f-subject', subject.value !== '');
+  toggleField('f-message', message.value.trim().length >= 10);
+
+  const valid = ['f-name','f-email','f-subject','f-message'].every(id => !document.getElementById(id).classList.contains('invalid'));
+  if (valid){
+    const payload = { name:name.value.trim(), email:email.value.trim(), subject:subject.value, message:message.value.trim(), timestamp:new Date().toISOString() };
+    store('signspeak_contacts', payload);
+    downloadJSON('signspeak-contact-' + Date.now() + '.json', payload);
+    contactForm.style.display = 'none';
+    document.getElementById('contactSuccess').classList.add('show');
+  }
+});
+function toggleField(id, ok){ document.getElementById(id).classList.toggle('invalid', !ok); }
+
+// ---------- Feedback form ----------
+let ratingVal = 0;
+document.querySelectorAll('#starRow button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    ratingVal = parseInt(btn.dataset.v);
+    document.querySelectorAll('#starRow button').forEach(b => b.classList.toggle('on', parseInt(b.dataset.v) <= ratingVal));
+  });
+});
+document.querySelectorAll('#catRow .chip').forEach(chip => { chip.addEventListener('click', () => chip.classList.toggle('on')); });
+
+document.getElementById('feedbackForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const payload = {
+    rating: ratingVal,
+    categories: Array.from(document.querySelectorAll('#catRow .chip.on')).map(c => c.dataset.c),
+    message: document.getElementById('fb-text').value.trim(),
+    contactOptIn: document.getElementById('fb-optin').checked,
+    timestamp: new Date().toISOString()
+  };
+  store('signspeak_feedback', payload);
+  downloadJSON('signspeak-feedback-' + Date.now() + '.json', payload);
+  e.target.style.display = 'none';
+  document.getElementById('feedbackSuccess').classList.add('show');
+});
+
+// ---------- Chatbox ----------
+const chatToggle = document.getElementById('chatToggle');
+const chatPanel = document.getElementById('chatPanel');
+const chatBody = document.getElementById('chatBody');
+const chatInput = document.getElementById('chatInput');
+chatToggle.addEventListener('click', () => chatPanel.classList.toggle('open'));
+const FAQ = {
+  setup: "Install the Chrome extension, open a Google Meet call, then start the local detection server on your computer. The extension connects to it at 127.0.0.1:8765.",
+  letters: "The current model recognizes ASL letters A through Y (25 classes). Full sentence-level ASL is on the roadmap.",
+  hear: "Yes, once you tap Speak, recognized text is converted to speech and routed toward the meeting audio path so the other participant can hear it.",
+};
+function addMsg(text, who){
+  const d = document.createElement('div'); d.className = 'msg ' + who; d.textContent = text;
+  chatBody.appendChild(d); chatBody.scrollTop = chatBody.scrollHeight;
+}
+const QUICK_MAP = {setup:'How do I set it up?', letters:'Which letters work?', hear:'Can others hear me?'};
+function answer(q){
+  addMsg(q, 'user');
+  const key = Object.keys(QUICK_MAP).find(k => QUICK_MAP[k] === q) || Object.keys(FAQ).find(k => q.toLowerCase().includes(k));
+  const typing = document.createElement('div'); typing.className = 'typing'; typing.innerHTML = '<span></span><span></span><span></span>';
+  chatBody.appendChild(typing); chatBody.scrollTop = chatBody.scrollHeight;
+  setTimeout(() => {
+    typing.remove();
+    addMsg(key ? FAQ[key] : "I don't have that in my FAQ yet. Try the Contact page and we'll follow up directly.", 'bot');
+  }, 700);
+}
+document.querySelectorAll('.chat-quick button').forEach(b => { b.onclick = () => answer(QUICK_MAP[b.dataset.q]); });
+document.getElementById('chatSend').addEventListener('click', () => {
+  const v = chatInput.value.trim(); if (!v) return; answer(v); chatInput.value = '';
+});
+chatInput.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('chatSend').click(); });
+
+// ---------- Auth modal (hashed + JSON download) ----------
+const authOverlay = document.getElementById('authOverlay');
+const authTabs = document.querySelectorAll('.authTab');
+let authMode = 'login';
+authTabs.forEach(t => t.addEventListener('click', () => {
+  authMode = t.dataset.tab;
+  authTabs.forEach(x => x.classList.toggle('on', x === t));
+}));
+document.getElementById('openLogin').addEventListener('click', () => authOverlay.style.display = 'flex');
+document.getElementById('closeAuth').addEventListener('click', () => authOverlay.style.display = 'none');
+authOverlay.addEventListener('click', e => { if (e.target === authOverlay) authOverlay.style.display = 'none'; });
+
+document.getElementById('authSubmit').addEventListener('click', () => {
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const errBox = document.getElementById('authErr');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 6){
+    errBox.textContent = 'Enter an email and a password (min 6 characters).';
+    errBox.style.display = 'block';
+    return;
+  }
+  errBox.style.display = 'none';
+  const passwordHash = hashPassword(password);
+
+  if (authMode === 'signup'){
+    const user = { id: makeUUID(), email, passwordHash, createdAt: new Date().toISOString() };
+    store('signspeak_users', user);
+    downloadJSON('signspeak-user-' + Date.now() + '.json', user);
+  } else {
+    const users = JSON.parse(localStorage.getItem('signspeak_users') || '[]');
+    const match = users.find(u => u.email === email && u.passwordHash === passwordHash);
+    if (!match){ errBox.textContent = 'No matching account found for that email and password.'; errBox.style.display = 'block'; return; }
+  }
+  authOverlay.style.display = 'none';
+});
+</script>
+</body>
+</html>
