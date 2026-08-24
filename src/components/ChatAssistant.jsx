@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import Logo from './Logo.jsx';
+import ChatbotIcon from './ChatbotIcon.jsx';
 import { faq, quickQuestions } from '../data/content.js';
 
 export default function ChatAssistant() {
@@ -20,9 +20,9 @@ export default function ChatAssistant() {
   }
 
   return <>
-    <button className="chat-toggle" onClick={() => setOpen(!open)} aria-label={open ? 'Close chat assistant' : 'Open chat assistant'} aria-expanded={open}><Logo /></button>
+    <button className="chat-toggle" onClick={() => setOpen(!open)} aria-label={open ? 'Close chat assistant' : 'Open chat assistant'} aria-expanded={open}><ChatbotIcon /></button>
     {open && <div className="chat-panel" role="dialog" aria-label="SignSpeak chat">
-      <div className="chat-head"><Logo className="avatar" /><div><strong>Assistant</strong><span>Usually answers instantly</span></div></div>
+      <div className="chat-head"><ChatbotIcon className="avatar" /><div><strong>Signa</strong><span>SignSpeak AI guide</span></div></div>
       <div className="chat-body">{messages.map((message, index) => <div className={`msg ${message.who}`} key={`${message.who}-${index}`}>{message.text}</div>)}</div>
       <div className="chat-quick">{Object.entries(quickQuestions).map(([key, question]) => <button key={key} onClick={() => answer(question)}>{question}</button>)}</div>
       <form className="chat-input" onSubmit={submit}><input value={input} onChange={(event) => setInput(event.target.value)} placeholder="Type a question..." aria-label="Chat question" /><button type="submit">Send</button></form>
