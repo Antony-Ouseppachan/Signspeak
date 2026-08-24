@@ -455,14 +455,14 @@ export const featureModules = [
 export const quickstartSteps = [
   {
     step: '01',
-    title: 'Clone & Start Detection Engine',
-    command: 'git clone https://github.com/signspeak/engine.git\ncd engine && pip install -r requirements.txt\npython server.py',
-    tip: 'Runs the lightweight on-device detection server with MediaPipe and Scikit-Learn.'
+    title: 'Open CMD & Start Detection Engine',
+    command: 'cd downloads\ngit clone -b extension --single-branch https://github.com/Antony-Ouseppachan/Signspeak.git\ncd Signspeak\npython ai_detection_server.py',
+    tip: 'Open Command Prompt (Press Win + R, type cmd, and press Enter) or Terminal, then paste the command above to start the local AI detection server.'
   },
   {
     step: '02',
     title: 'Load Chrome Extension',
-    command: 'chrome://extensions/ -> Enable "Developer mode" -> Click "Load unpacked" -> Select /dist',
+    command: 'chrome://extensions/ -> Enable "Developer mode" -> Click "Load unpacked" -> Select /C:/Users/UserName/Downloads/Signspeak',
     tip: 'Injects the SignSpeak floating controller HUD into any active Google Meet session.'
   },
   {

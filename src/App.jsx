@@ -30,7 +30,8 @@ import {
   SpinnerIcon,
   CloseIcon,
   EyeIcon,
-  EyeOffIcon
+  EyeOffIcon,
+  ExtensionIcon
 } from './components/Icons.jsx';
 import { metrics, featureModules, comparisonPoints, sdgGoals, limitations } from './data/content.js';
 
@@ -234,18 +235,8 @@ function Splash({ onDismiss }) {
         <p className="splash-tagline">Real-Time Sign-to-Speech Accessibility</p>
       </div>
 
-      {/* 7. Fullscreen Cinematic Bottom Loading Progress with Monospace Telemetry */}
+      {/* 7. Fullscreen Cinematic Bottom Loading Progress */}
       <div className="splash-bottom-bar-wrap">
-        <div className="splash-bottom-meta">
-          <span className="splash-meta-text">
-            {progress < 40
-              ? 'INITIALIZING NEURAL MESH'
-              : progress < 80
-              ? 'SYNTHESIZING ACOUSTIC ENGINE'
-              : 'PLATFORM READY'}
-          </span>
-          <span className="splash-meta-count">{String(progress).padStart(2, '0')}%</span>
-        </div>
         <div className="splash-progress-track">
           <div className="splash-progress-fill" style={{ width: `${progress}%` }}>
             <div className="progress-leading-flare" />
@@ -1433,6 +1424,22 @@ export default function App() {
             </div>
 
             <div className="topbar-actions">
+              <button
+                type="button"
+                className="btn btn-outline get-extension-btn"
+                onClick={() => {
+                  if (view !== 'about') navigate('about');
+                  setTimeout(() => {
+                    const el = document.getElementById('quickstart');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }, 100);
+                }}
+                title="How to setup and install the SignSpeak extension"
+              >
+                <ExtensionIcon size={15} />
+                <span>Get Extension</span>
+              </button>
+
               <button className="btn btn-primary quick-demo-btn" onClick={() => {
                 if (view !== 'about') navigate('about');
                 setTimeout(() => {
