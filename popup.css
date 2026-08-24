@@ -19,6 +19,40 @@ body {
   border-bottom: 1px solid #1a2a1a;
 }
 #header-title { font-size: 14px; font-weight: bold; color: #3ddc84; }
+#header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#about-btn {
+  background: #142914;
+  color: #3ddc84;
+  border: 1px solid #234723;
+  padding: 3px 8px;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 11px;
+  font-weight: 600;
+  transition: background 0.15s, border-color 0.15s;
+}
+#about-btn:hover {
+  background: #1f3d1f;
+  border-color: #3ddc84;
+}
+#close-panel-btn {
+  background: transparent;
+  color: #888;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+  line-height: 1;
+}
+#close-panel-btn:hover {
+  color: #ff5555;
+  background: #2a1111;
+}
 #status-dot { font-size: 11px; }
 #status-dot.live   { color: #3ddc84; }
 #status-dot.offline{ color: #666; }
