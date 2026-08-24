@@ -41,18 +41,33 @@ export async function onRequestGet(context) {
 
     const user = users[0];
 
-    // Get counts for feedback and contact inquiries
-    const [feedbackStats, contactStats] = await Promise.all([
+    // Get counts for feedback, contact inquiries, and ASL study progress
+    const [feedbackStats, contactStats, playgroundRows] = await Promise.all([
       sql`SELECT COUNT(*)::int as count FROM feedback WHERE user_id = ${user.id}`,
-      sql`SELECT COUNT(*)::int as count FROM contact_messages WHERE user_id = ${user.id}`
+      sql`SELECT COUNT(*)::int as count FROM contact_messages WHERE user_id = ${user.id}`,
+      sql`SELECT * FROM user_playground_progress WHERE user_id = ${user.id} LIMIT 1`
     ]);
+
+    const playground = playgroundRows[0] || {
+      xp: 0,
+      level: 1,
+      streak: 1,
+      expertise_tier: 'Novice Signer',
+      practiced_letters: [],
+      unlocked_achievements: ['first_sign'],
+      quiz_high_score: 0,
+      words_completed: 0,
+      total_drills: 0,
+      accuracy_rate: 100.0
+    };
 
     return successResponse({
       ...user,
       stats: {
         feedbackCount: feedbackStats[0]?.count || 0,
         contactCount: contactStats[0]?.count || 0
-      }
+      },
+      playground
     }, 200);
   } catch (err) {
     console.error('[API /api/profile GET] Error:', err.message);

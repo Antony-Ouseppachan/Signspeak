@@ -128,5 +128,20 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(typeof payload === 'string' ? { status: payload } : payload)
     });
+  },
+
+  // Retrieve ASL study playground gamification progress
+  async getPlaygroundProgress() {
+    return request('/api/playground/progress', {
+      method: 'GET'
+    });
+  },
+
+  // Save/sync ASL study playground gamification progress to Neon
+  async updatePlaygroundProgress(payload) {
+    return request('/api/playground/progress', {
+      method: 'PUT',
+      body: JSON.stringify(payload)
+    });
   }
 };

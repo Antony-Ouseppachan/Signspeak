@@ -1,12 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
+import { api } from '../services/api.js';
 import {
   UserIcon,
   CheckIcon,
   SpinnerIcon,
   ShieldIcon,
   LogOutIcon,
-  EditIcon
+  EditIcon,
+  TrophyIcon,
+  ZapIcon,
+  FlameIcon,
+  PlaygroundIcon,
+  SparklesIcon
 } from './Icons.jsx';
 
 export default function ProfileView({ navigate }) {
@@ -16,6 +22,19 @@ export default function ProfileView({ navigate }) {
   const [role, setRole] = useState('ASL Signer / Participant');
   const [preferredDialect, setPreferredDialect] = useState('ASL (American Sign Language)');
   
+  const [studyData, setStudyData] = useState({
+    xp: 0,
+    level: 1,
+    streak: 1,
+    expertise_tier: 'Novice Signer',
+    practiced_letters: [],
+    unlocked_achievements: ['first_sign'],
+    quiz_high_score: 0,
+    words_completed: 0,
+    total_drills: 0,
+    accuracy_rate: 100.0
+  });
+
   const [submitting, setSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -25,6 +44,26 @@ export default function ProfileView({ navigate }) {
       setDisplayName(profile?.display_name || user?.displayName || '');
     }
   }, [profile, user]);
+
+  useEffect(() => {
+    if (!user) return;
+    async function loadStudyProgress() {
+      try {
+        const data = await api.getPlaygroundProgress();
+        if (data) {
+          setStudyData(data);
+        }
+      } catch {
+        try {
+          const cached = JSON.parse(localStorage.getItem(`signspeak_study_${user.uid}`) || '{}');
+          if (cached.xp !== undefined) {
+            setStudyData(cached);
+          }
+        } catch {}
+      }
+    }
+    loadStudyProgress();
+  }, [user]);
 
   if (!user) {
     return (
@@ -91,10 +130,10 @@ export default function ProfileView({ navigate }) {
 
         {/* Page Title */}
         <div className="profile-page-header">
-          <div className="kicker">ACCOUNT SETTINGS</div>
+          <div className="kicker">ACCOUNT SETTINGS & ASL MASTERY</div>
           <h1>My Profile</h1>
           <p className="sub">
-            Customize your display name, personal accessibility preferences, and sign-to-speech options.
+            Customize your display name, review your sign language expertise tier, and access telemetry metrics.
           </p>
         </div>
 
@@ -138,6 +177,12 @@ export default function ProfileView({ navigate }) {
                   <span className="stat-value">{memberSince}</span>
                 </div>
                 <div className="quick-stat-row">
+                  <span className="stat-label">Calculated Tier</span>
+                  <span className="stat-value highlight-green">
+                    {studyData.expertise_tier || 'Novice Signer'}
+                  </span>
+                </div>
+                <div className="quick-stat-row">
                   <span className="stat-label">Account Status</span>
                   <span className="stat-value status-active">
                     <span className="live-dot" /> Active
@@ -173,8 +218,72 @@ export default function ProfileView({ navigate }) {
             </div>
           </div>
 
-          {/* Right Column: Edit Profile & Accessibility Preferences */}
+          {/* Right Column: ASL Mastery Card & Edit Profile Form */}
           <div className="profile-main-col">
+            {/* ASL Study Mastery & Expertise Tier (Synchronized with Neon PostgreSQL) */}
+            <div className="profile-settings-card profile-asl-mastery-card">
+              <div className="card-header-row">
+                <div className="card-header-icon highlight-icon">
+                  <TrophyIcon size={20} />
+                </div>
+                <div className="card-header-text">
+                  <div className="asl-tier-badge-row">
+                    <h3>ASL Study Telemetry & Mastery Tier</h3>
+                    <span className="expertise-level-pill">
+                      <TrophyIcon size={13} />
+                      <span>{studyData.expertise_tier || 'Novice Signer'}</span>
+                    </span>
+                  </div>
+                  <p>Real-time progress, accuracy rate, and achievements synchronized with your profile.</p>
+                </div>
+              </div>
+
+              <div className="profile-study-metrics-grid">
+                <div className="study-metric-box">
+                  <span className="metric-box-label">Study Level</span>
+                  <strong className="metric-box-val">Level {studyData.level || 1}</strong>
+                  <span className="metric-box-sub">{studyData.xp || 0} Total XP</span>
+                </div>
+
+                <div className="study-metric-box">
+                  <span className="metric-box-label">Alphabet Mastery</span>
+                  <strong className="metric-box-val">
+                    {(studyData.practiced_letters || []).length}/26 Signs
+                  </strong>
+                  <span className="metric-box-sub">
+                    {Math.round(((studyData.practiced_letters || []).length / 26) * 100)}% Complete
+                  </span>
+                </div>
+
+                <div className="study-metric-box">
+                  <span className="metric-box-label">Study Streak</span>
+                  <strong className="metric-box-val">
+                    {studyData.streak || 1} Days
+                  </strong>
+                  <span className="metric-box-sub highlight-green">Active Record</span>
+                </div>
+
+                <div className="study-metric-box">
+                  <span className="metric-box-label">Speed Drill Best</span>
+                  <strong className="metric-box-val">
+                    {studyData.quiz_high_score || 0} PTS
+                  </strong>
+                  <span className="metric-box-sub">{studyData.total_drills || 0} Drills Finished</span>
+                </div>
+              </div>
+
+              <div className="profile-playground-cta-row">
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => navigate('playground')}
+                >
+                  <PlaygroundIcon size={16} />
+                  <span>Launch ASL Study Playground →</span>
+                </button>
+              </div>
+            </div>
+
             {/* Edit Personal Info */}
             <div className="profile-settings-card">
               <div className="card-header-row">

@@ -31,8 +31,10 @@ import {
   CloseIcon,
   EyeIcon,
   EyeOffIcon,
-  ExtensionIcon
+  ExtensionIcon,
+  PlaygroundIcon
 } from './components/Icons.jsx';
+import PlaygroundView from './components/PlaygroundView.jsx';
 import { metrics, featureModules, comparisonPoints, sdgGoals, limitations } from './data/content.js';
 
 function MetricIcon({ name }) {
@@ -1345,11 +1347,11 @@ function ProfileModal({ onClose }) {
 }
 
 export default function App() {
-  const { user, profile, signOutUser } = useAuth();
+  const { user, profile, loading: authLoading, signOutUser } = useAuth();
   const [splash, setSplash] = useState(true);
   const [view, setView] = useState(() => {
     const hash = window.location.hash.slice(1);
-    return ['about', 'contact', 'feedback', 'profile', 'admin'].includes(hash) ? hash : 'about';
+    return ['about', 'playground', 'contact', 'feedback', 'profile', 'admin'].includes(hash) ? hash : 'about';
   });
 
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -1359,7 +1361,7 @@ export default function App() {
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.slice(1);
-      if (['about', 'contact', 'feedback', 'profile', 'admin'].includes(hash)) {
+      if (['about', 'playground', 'contact', 'feedback', 'profile', 'admin'].includes(hash)) {
         setView(hash);
       }
     };
@@ -1381,10 +1383,14 @@ export default function App() {
   const userPhoto = profile?.photo_url || user?.photoURL;
 
   // Detect if user signed in for the first time without a personalized display name
+  // Wait until auth and profile are fully resolved to prevent split-second flash on refresh
+  const effectiveName = profile?.display_name || user?.displayName || '';
   const needsOnboarding = Boolean(
+    !authLoading &&
     user &&
+    profile &&
     !welcomeDismissed &&
-    (!profile?.display_name || profile.display_name.trim() === '' || profile.display_name === 'User') &&
+    (!effectiveName || effectiveName.trim() === '' || effectiveName.trim().toLowerCase() === 'user') &&
     !localStorage.getItem(`signspeak_onboarded_${user.uid}`)
   );
 
@@ -1399,6 +1405,7 @@ export default function App() {
           <div className="navlinks">
             {[
               { key: 'about', label: 'Platform', Icon: PlatformIcon },
+              { key: 'playground', label: 'Playground', Icon: PlaygroundIcon },
               { key: 'contact', label: 'Contact', Icon: ContactIcon },
               { key: 'feedback', label: 'Feedback', Icon: FeedbackIcon },
             ].map(({ key, label, Icon }) => (
@@ -1490,6 +1497,8 @@ export default function App() {
 
           {view === 'about' ? (
             <HomeView navigate={navigate} />
+          ) : view === 'playground' ? (
+            <PlaygroundView navigate={navigate} onOpenAuth={() => setAuthModalOpen(true)} />
           ) : view === 'profile' ? (
             <ProfileView navigate={navigate} />
           ) : view === 'admin' ? (

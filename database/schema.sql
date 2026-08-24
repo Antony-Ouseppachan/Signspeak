@@ -61,3 +61,25 @@ CREATE INDEX IF NOT EXISTS idx_feedback_user_id ON feedback (user_id);
 CREATE INDEX IF NOT EXISTS idx_feedback_rating ON feedback (rating);
 CREATE INDEX IF NOT EXISTS idx_feedback_status ON feedback (status);
 CREATE INDEX IF NOT EXISTS idx_feedback_is_starred ON feedback (is_starred);
+
+-- 4. User ASL Study Playground & Gamification Progress Table
+CREATE TABLE IF NOT EXISTS user_playground_progress (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    xp INTEGER NOT NULL DEFAULT 0,
+    level INTEGER NOT NULL DEFAULT 1,
+    streak INTEGER NOT NULL DEFAULT 1,
+    expertise_tier VARCHAR(50) NOT NULL DEFAULT 'Novice Signer',
+    practiced_letters JSONB NOT NULL DEFAULT '[]'::jsonb,
+    unlocked_achievements JSONB NOT NULL DEFAULT '["first_sign"]'::jsonb,
+    quiz_high_score INTEGER NOT NULL DEFAULT 0,
+    words_completed INTEGER NOT NULL DEFAULT 0,
+    total_drills INTEGER NOT NULL DEFAULT 0,
+    accuracy_rate NUMERIC(5,2) NOT NULL DEFAULT 100.00,
+    last_studied_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_playground_user_id ON user_playground_progress (user_id);
+CREATE INDEX IF NOT EXISTS idx_playground_xp ON user_playground_progress (xp DESC);

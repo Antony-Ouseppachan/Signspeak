@@ -41,8 +41,8 @@ export async function onRequestPost(context) {
       )
       ON CONFLICT (firebase_uid) DO UPDATE SET
         email = EXCLUDED.email,
-        display_name = COALESCE(EXCLUDED.display_name, users.display_name),
-        photo_url = COALESCE(EXCLUDED.photo_url, users.photo_url),
+        display_name = COALESCE(users.display_name, EXCLUDED.display_name),
+        photo_url = COALESCE(users.photo_url, EXCLUDED.photo_url),
         last_login_at = NOW(),
         updated_at = NOW()
       RETURNING
