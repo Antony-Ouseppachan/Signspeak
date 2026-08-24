@@ -64,7 +64,7 @@ chrome.storage.local.get(["lastText", "streak", "totalSigns"], (r) => {
 const MODEL_SERVER = "http://127.0.0.1:8765";
 let modelBusy = false;
 let lastModelTime = 0;
-const MODEL_INTERVAL_MS = 20; // 50 checks/sec for real-time responsiveness
+const MODEL_INTERVAL_MS = 90; // ~11 checks/sec: perfectly smooth for ASL while saving ~75% CPU
 
 function landmarksForModel(lm) {
   // In p3.py, cv2.flip(frame, 1) mirrors the video horizontally before MediaPipe processes it.
@@ -211,10 +211,15 @@ async function startCamera() {
     camStatusEl.textContent = "Camera ready ✓";
 
     let processingFrame = false;
+    let lastFrameTime = 0;
+    const FRAME_INTERVAL_MS = 50; // Cap MediaPipe processing to max ~20 FPS for smooth performance
+
     const camera = new Camera(video, {
       onFrame: async () => {
-        if (processingFrame) return;
+        const now = performance.now();
+        if (processingFrame || now - lastFrameTime < FRAME_INTERVAL_MS) return;
         processingFrame = true;
+        lastFrameTime = now;
         try {
           await hands.send({ image: video });
         } catch (e) {
@@ -223,8 +228,8 @@ async function startCamera() {
           processingFrame = false;
         }
       },
-      width: 380,
-      height: 210
+      width: 320,
+      height: 180
     });
     camera.start();
 
