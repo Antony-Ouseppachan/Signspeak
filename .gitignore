@@ -1,5 +1,19 @@
+# Dependencies & Build Output
 node_modules
 dist
+.wrangler
+
+# Local Environment Variables & Secrets
 .env
 .env.*
+.dev.vars
+.dev.vars.*
+
+# Retain Example Templates in Git
 !.env.example
+!.dev.vars.example
+
+# OS & Editor Files
+.DS_Store
+Thumbs.db
+*.log

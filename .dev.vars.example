@@ -1,0 +1,7 @@
+# Server-Side Cloudflare Worker / API Secrets
+# Copy this file to .dev.vars for local development.
+# In production, set these as Cloudflare Worker Secrets / Environment Variables.
+# CRITICAL: NEVER expose these values to frontend browser code.
+
+DATABASE_URL=postgresql://neondb_owner:your_password@ep-your-endpoint.us-east-2.aws.neon.tech/neondb?sslmode=require
+FIREBASE_PROJECT_ID=your_firebase_project_id
