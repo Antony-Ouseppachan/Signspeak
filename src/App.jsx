@@ -589,10 +589,10 @@ function HomeView({ navigate }) {
           <h2>Experience the future of inclusive video calls.</h2>
           <p>Join our community, contribute code, or share valuable feedback on sign language accuracy.</p>
           <div className="cta-btns">
-            <button className="btn btn-primary" onClick={() => navigate('feedback')}>
+            <button type="button" className="btn btn-primary" onClick={() => navigate('feedback')}>
               Give Feedback <span>↗</span>
             </button>
-            <button className="btn" onClick={() => navigate('contact')}>
+            <button type="button" className="btn btn-outline" onClick={() => navigate('contact')}>
               Contact Support
             </button>
           </div>
