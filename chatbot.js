@@ -105,11 +105,7 @@ async function getLanguageModel() {
   }
 
   const options = {
-    expectedInputs: [
-      { type: "text", languages: ["en"] },
-      { type: "image" },
-      { type: "audio" }
-    ],
+    expectedInputs: [{ type: "text", languages: ["en"] }],
     expectedOutputs: [{ type: "text", languages: ["en"] }]
   };
 
