@@ -15,7 +15,10 @@ import {
   ShieldIcon,
   PlatformIcon,
   CloseIcon,
-  SpinnerIcon
+  SpinnerIcon,
+  CameraIcon,
+  VideoIcon,
+  AwardIcon
 } from './Icons.jsx';
 import { aslAlphabet, handBones, wordChallenges, achievementsList } from '../data/aslDataset.js';
 
@@ -102,7 +105,7 @@ export default function PlaygroundView({ navigate, onOpenAuth }) {
   const [syncSuccess, setSyncSuccess] = useState(true);
 
   // Active Playground Tab
-  const [activeTab, setActiveTab] = useState('dictionary'); // 'dictionary' | 'quiz' | 'words' | 'sandbox'
+  const [activeTab, setActiveTab] = useState('dictionary'); // 'dictionary' | 'quiz' | 'sandbox'
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [achievementsModalOpen, setAchievementsModalOpen] = useState(false);
   const [recentXpGain, setRecentXpGain] = useState(null);
@@ -122,16 +125,29 @@ export default function PlaygroundView({ navigate, onOpenAuth }) {
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [answerFeedback, setAnswerFeedback] = useState(null);
 
-  // Word Spelling State
-  const [selectedWord, setSelectedWord] = useState(wordChallenges[0]);
-  const [spellingIndex, setSpellingIndex] = useState(0);
-  const [spelledLetters, setSpelledLetters] = useState([]);
-  const [wordSuccess, setWordSuccess] = useState(false);
+  // Live Accuracy Sandbox & Camera State
+  const [sandboxWord, setSandboxWord] = useState(wordChallenges[0]);
+  const [sandboxStep, setSandboxStep] = useState(0);
+  const [letterScores, setLetterScores] = useState([]);
+  const [sandboxCameraActive, setSandboxCameraActive] = useState(false);
+  const [cameraLoading, setCameraLoading] = useState(false);
+  const [cameraError, setCameraError] = useState(null);
+  const [sandboxSimMode, setSandboxSimMode] = useState(false);
+  const [simulatedSign, setSimulatedSign] = useState(null);
+  const [liveAccuracy, setLiveAccuracy] = useState(0);
+  const [holdProgress, setHoldProgress] = useState(0);
+  const [detectedLetter, setDetectedLetter] = useState('—');
+  const [handDetected, setHandDetected] = useState(false);
+  const [modelServerOnline, setModelServerOnline] = useState(false);
+  const [wordCompletedModal, setWordCompletedModal] = useState(false);
+  const [completedWordAccuracy, setCompletedWordAccuracy] = useState(98.0);
+  const [completedWordXp, setCompletedWordXp] = useState(60);
 
-  // Sandbox Live Recognition Simulator
-  const [sandboxLetter, setSandboxLetter] = useState('A');
-  const [sandboxConfidence, setSandboxConfidence] = useState(98.4);
-  const [sandboxJitter, setSandboxJitter] = useState(0);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const streamRef = useRef(null);
+  const animRef = useRef(null);
+  const holdIntervalRef = useRef(null);
 
   // 1. Initial Load: Fetch User Study Progress from Neon PostgreSQL
   useEffect(() => {
@@ -378,46 +394,463 @@ export default function PlaygroundView({ navigate, onOpenAuth }) {
     }
   }
 
-  // Word Spelling Advance
-  function handleSelectWord(w) {
-    setSelectedWord(w);
-    setSpellingIndex(0);
-    setSpelledLetters([]);
-    setWordSuccess(false);
-  }
 
-  function handleAdvanceWordSpell() {
-    if (!selectedWord) return;
-    const currentTargetLetter = selectedWord.letters[spellingIndex];
-    speakPhonetic(currentTargetLetter);
-    playTone('success');
-
-    const nextSpelled = [...spelledLetters, currentTargetLetter];
-    setSpelledLetters(nextSpelled);
-
-    if (spellingIndex + 1 >= selectedWord.letters.length) {
-      setWordSuccess(true);
-      const nextWordsCompleted = wordsCompleted + 1;
-      setWordsCompleted(nextWordsCompleted);
-      speakPhonetic(`Excellent! You spelled ${selectedWord.word}`);
-      awardXp(selectedWord.xpReward, `Completed Word: ${selectedWord.word}`, {
-        words_completed: nextWordsCompleted
-      });
-    } else {
-      setSpellingIndex((prev) => prev + 1);
-    }
-  }
-
-  // Live Sandbox Simulation Effect
+  // Check local SignSpeak Python model server connectivity
   useEffect(() => {
-    if (activeTab === 'sandbox') {
-      const interval = setInterval(() => {
-        setSandboxConfidence(+(97.2 + Math.random() * 2.5).toFixed(1));
-        setSandboxJitter((prev) => (prev + 1) % 100);
-      }, 800);
-      return () => clearInterval(interval);
+    async function checkServer() {
+      try {
+        const res = await fetch('http://127.0.0.1:8765/health', { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.ok) setModelServerOnline(true);
+        }
+      } catch {
+        setModelServerOnline(false);
+      }
     }
-  }, [activeTab]);
+    checkServer();
+  }, []);
+
+  // Sandbox Camera Lifecycle Functions
+  // Normalize 21 3D landmarks (wrist-centered & max coordinate scaled)
+  const normalizeLandmarks = useCallback((rawLandmarks) => {
+    if (!rawLandmarks || rawLandmarks.length !== 21) return null;
+    const coords = rawLandmarks.map((p) => ({ x: 1 - p.x, y: p.y, z: p.z || 0 }));
+    const wrist = coords[0];
+    const rel = coords.map((c) => ({ x: c.x - wrist.x, y: c.y - wrist.y, z: c.z - wrist.z }));
+    const maxVal = Math.max(...rel.flatMap((c) => [Math.abs(c.x), Math.abs(c.y), Math.abs(c.z)])) || 1e-6;
+    return rel.map((c) => ({ x: c.x / maxVal, y: c.y / maxVal, z: c.z / maxVal }));
+  }, []);
+
+
+
+  // Target letter for current challenge step
+  const currentTargetLetter = sandboxWord?.letters?.[sandboxStep] || 'A';
+  const targetLetterData = useMemo(() => {
+    return aslAlphabet.find((a) => a.letter === currentTargetLetter) || aslAlphabet[0];
+  }, [currentTargetLetter]);
+
+  // Synchronized state refs to prevent any closure lag in high-frequency video frames
+  const currentTargetLetterRef = useRef(currentTargetLetter);
+  currentTargetLetterRef.current = currentTargetLetter;
+  const sandboxStepRef = useRef(sandboxStep);
+  sandboxStepRef.current = sandboxStep;
+  const sandboxWordRef = useRef(sandboxWord);
+  sandboxWordRef.current = sandboxWord;
+  const letterScoresRef = useRef(letterScores);
+  letterScoresRef.current = letterScores;
+  const wordsCompletedRef = useRef(wordsCompleted);
+  wordsCompletedRef.current = wordsCompleted;
+  const accuracyRateRef = useRef(accuracyRate);
+  accuracyRateRef.current = accuracyRate;
+  const totalDrillsRef = useRef(totalDrills);
+  totalDrillsRef.current = totalDrills;
+  const consecutiveMatchesRef = useRef(0);
+  const isAdvancingRef = useRef(false);
+
+  // Evaluate gesture for human readability & conversational intelligibility
+  const evaluateLandmarks = useCallback((detectedNorm, targetLetterChar) => {
+    if (!detectedNorm || detectedNorm.length !== 21) return { accuracy: 0, predictedLetter: '—', understood: false };
+
+    // 1. Calculate finger extension states from 21 MediaPipe coordinates
+    // In normalized coords, y is negative going up (tip y < PIP y means finger is extended)
+    const isIndexExtended = detectedNorm[8].y < detectedNorm[6].y - 0.05;
+    const isMiddleExtended = detectedNorm[12].y < detectedNorm[10].y - 0.05;
+    const isRingExtended = detectedNorm[16].y < detectedNorm[14].y - 0.05;
+    const isPinkyExtended = detectedNorm[20].y < detectedNorm[18].y - 0.05;
+    
+    // Thumb extension: distance from wrist / index MCP
+    const thumbDistFromPalm = Math.hypot(detectedNorm[4].x - detectedNorm[2].x, detectedNorm[4].y - detectedNorm[2].y);
+    const isThumbExtended = thumbDistFromPalm > 0.32;
+
+    // 2. Strict, distinct ASL posture verification for individual letters
+    let matchesTargetPosture = false;
+
+    if (targetLetterChar === 'E') {
+      // E: ALL 4 fingers curled down tightly into the palm, thumb tucked across/below fingertips
+      matchesTargetPosture = !isIndexExtended && !isMiddleExtended && !isRingExtended && !isPinkyExtended && !isThumbExtended;
+    } else if (targetLetterChar === 'A') {
+      // A: fist closed, thumb resting upright against the index knuckle
+      matchesTargetPosture = !isIndexExtended && !isMiddleExtended && !isRingExtended && !isPinkyExtended && isThumbExtended;
+    } else if (targetLetterChar === 'S') {
+      // S: closed fist with thumb wrapped across the front of the 4 curled fingers
+      matchesTargetPosture = !isIndexExtended && !isMiddleExtended && !isRingExtended && !isPinkyExtended;
+    } else if (targetLetterChar === 'B') {
+      // B: all 4 fingers extended straight up, thumb folded across palm
+      matchesTargetPosture = isIndexExtended && isMiddleExtended && isRingExtended && isPinkyExtended && !isThumbExtended;
+    } else if (targetLetterChar === 'H') {
+      // H: index and middle extended together horizontally/forward, ring and pinky curled
+      matchesTargetPosture = isIndexExtended && isMiddleExtended && !isRingExtended && !isPinkyExtended;
+    } else if (targetLetterChar === 'L') {
+      // L: index extended straight up, thumb extended out to side (L shape), other 3 curled
+      matchesTargetPosture = isIndexExtended && isThumbExtended && !isMiddleExtended && !isRingExtended && !isPinkyExtended;
+    } else if (targetLetterChar === 'O') {
+      // O: all 4 fingertips curled in an O shape touching thumb tip
+      const indexThumbGap = Math.hypot(detectedNorm[8].x - detectedNorm[4].x, detectedNorm[8].y - detectedNorm[4].y);
+      matchesTargetPosture = !isIndexExtended && !isMiddleExtended && !isRingExtended && !isPinkyExtended && indexThumbGap < 0.28;
+    } else if (targetLetterChar === 'C') {
+      // C: curved hand (thumb and index separated in a C arch)
+      const indexThumbGap = Math.hypot(detectedNorm[8].x - detectedNorm[4].x, detectedNorm[8].y - detectedNorm[4].y);
+      matchesTargetPosture = !isMiddleExtended && !isRingExtended && !isPinkyExtended && indexThumbGap > 0.32;
+    } else if (targetLetterChar === 'D') {
+      // D: index pointing up, thumb touching middle, ring, pinky in loop
+      matchesTargetPosture = isIndexExtended && !isMiddleExtended && !isRingExtended && !isPinkyExtended && !isThumbExtended;
+    } else if (targetLetterChar === 'I') {
+      // I: pinky extended straight up, all other fingers curled
+      matchesTargetPosture = isPinkyExtended && !isIndexExtended && !isMiddleExtended && !isRingExtended;
+    } else if (targetLetterChar === 'V') {
+      // V: index and middle extended in a spread V, ring and pinky curled
+      matchesTargetPosture = isIndexExtended && isMiddleExtended && !isRingExtended && !isPinkyExtended;
+    } else if (targetLetterChar === 'W') {
+      // W: index, middle, ring extended spread out, pinky curled
+      matchesTargetPosture = isIndexExtended && isMiddleExtended && isRingExtended && !isPinkyExtended;
+    } else if (targetLetterChar === 'Y') {
+      // Y: thumb and pinky extended, middle 3 curled
+      matchesTargetPosture = isThumbExtended && isPinkyExtended && !isIndexExtended && !isMiddleExtended && !isRingExtended;
+    } else if (targetLetterChar === 'U') {
+      // U: index and middle extended together straight up
+      matchesTargetPosture = isIndexExtended && isMiddleExtended && !isRingExtended && !isPinkyExtended;
+    } else if (targetLetterChar === 'P') {
+      // P: index extended down/forward, middle bent down
+      matchesTargetPosture = isIndexExtended && !isRingExtended && !isPinkyExtended;
+    } else if (targetLetterChar === 'N') {
+      // N: Index and middle folded over thumb, thumb tip resting between middle and ring
+      const thumbTipX = detectedNorm[4].x;
+      const indexMcpX = detectedNorm[5].x;
+      const pinkyMcpX = detectedNorm[17].x;
+      const thumbIsBetweenKnuckles = Math.min(indexMcpX, pinkyMcpX) <= thumbTipX && thumbTipX <= Math.max(indexMcpX, pinkyMcpX);
+      matchesTargetPosture = !isRingExtended && !isPinkyExtended && !isIndexExtended && !isMiddleExtended && thumbIsBetweenKnuckles;
+    } else if (targetLetterChar === 'M') {
+      // M: Three fingers folded over thumb
+      matchesTargetPosture = !isPinkyExtended && !isIndexExtended && !isMiddleExtended && !isRingExtended;
+    } else if (targetLetterChar === 'G') {
+      // G: Index and thumb pointing horizontally
+      matchesTargetPosture = isIndexExtended && isThumbExtended && !isMiddleExtended && !isRingExtended && !isPinkyExtended;
+    }
+
+    // 3. Euclidean alignment with dataset templates
+    let bestLetter = '—';
+    let bestDist = Infinity;
+    let targetDist = Infinity;
+
+    aslAlphabet.forEach((alpha) => {
+      if (!alpha.landmarks || alpha.landmarks.length !== 21) return;
+      const tWrist = alpha.landmarks[0];
+      const tRel = alpha.landmarks.map((c) => ({ x: c.x - tWrist.x, y: c.y - tWrist.y, z: 0 }));
+      const tMax = Math.max(...tRel.flatMap((c) => [Math.abs(c.x), Math.abs(c.y)])) || 1;
+      const tNorm = tRel.map((c) => ({ x: c.x / tMax, y: c.y / tMax }));
+
+      let dist = 0;
+      for (let i = 0; i < 21; i++) {
+        const dx = detectedNorm[i].x - tNorm[i].x;
+        const dy = detectedNorm[i].y - tNorm[i].y;
+        const weight = (i === 4 || i === 8 || i === 12 || i === 16 || i === 20) ? 1.8 : 1.0;
+        dist += Math.sqrt(dx * dx + dy * dy) * weight;
+      }
+      dist /= 24;
+
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestLetter = alpha.letter;
+      }
+      if (alpha.letter === targetLetterChar) {
+        targetDist = dist;
+      }
+    });
+
+    // Valid match criteria: Posture check MUST pass AND template alignment confirms it
+    const isUnderstood = matchesTargetPosture && (bestLetter === targetLetterChar || targetDist < 0.38);
+    const humanAccuracy = isUnderstood
+      ? Math.max(85, Math.min(98.5, Math.round((1 - Math.min(0.35, targetDist) * 0.8) * 100)))
+      : Math.max(15, Math.min(65, Math.round((1 - Math.min(1.0, targetDist)) * 100)));
+
+    return {
+      accuracy: humanAccuracy,
+      predictedLetter: isUnderstood ? targetLetterChar : bestLetter,
+      understood: isUnderstood
+    };
+  }, []);
+
+  // Switch challenge word
+  function handleSelectSandboxWord(wordObj) {
+    setSandboxWord(wordObj);
+    sandboxWordRef.current = wordObj;
+    setSandboxStep(0);
+    sandboxStepRef.current = 0;
+    setLetterScores([]);
+    letterScoresRef.current = [];
+    setHoldProgress(0);
+    setLiveAccuracy(0);
+    setDetectedLetter('—');
+    setHandDetected(false);
+    setWordCompletedModal(false);
+    consecutiveMatchesRef.current = 0;
+    isAdvancingRef.current = false;
+  }
+
+  // Fast capture & seamless progression to next letter
+  const handleConfirmSandboxLetter = useCallback((explicitScore) => {
+    if (isAdvancingRef.current) return;
+    isAdvancingRef.current = true;
+
+    const targetChar = currentTargetLetterRef.current;
+    const currentStep = sandboxStepRef.current;
+    const currentWord = sandboxWordRef.current;
+    const currentScores = letterScoresRef.current;
+    const currentWordsCompleted = wordsCompletedRef.current;
+    const currentAccuracyRate = accuracyRateRef.current;
+    const currentTotalDrills = totalDrillsRef.current;
+
+    const letterAccuracy = explicitScore !== undefined ? explicitScore : +(90.0 + Math.random() * 8.0).toFixed(1);
+    playTone('success');
+    speakPhonetic(targetChar);
+
+    const nextScores = [...currentScores, letterAccuracy];
+    setLetterScores(nextScores);
+    letterScoresRef.current = nextScores;
+    setHoldProgress(100);
+
+    if (currentStep + 1 < currentWord.letters.length) {
+      // Advance to next letter and apply transition cooldown to require forming the new letter
+      const nextStep = currentStep + 1;
+      setSandboxStep(nextStep);
+      sandboxStepRef.current = nextStep;
+      setLiveAccuracy(0);
+      setDetectedLetter('—');
+      setHoldProgress(0);
+      consecutiveMatchesRef.current = 0;
+
+      // 800ms guard to ensure the user actually transitions to the new letter
+      setTimeout(() => {
+        isAdvancingRef.current = false;
+      }, 800);
+    } else {
+      // Completed entire word!
+      const avgAccuracy = Math.round(nextScores.reduce((a, b) => a + b, 0) / nextScores.length);
+      const bonusXp = Math.round((avgAccuracy / 100) * 20);
+      const totalWordXp = currentWord.xpReward + bonusXp;
+
+      playTone('levelup');
+      speakPhonetic(`Word completed: ${currentWord.word}!`);
+
+      const nextWordsCompleted = currentWordsCompleted + 1;
+      const nextTotalDrills = currentTotalDrills + 1;
+      const updatedAccuracy = Math.round((currentAccuracyRate * 0.7) + (avgAccuracy * 0.3));
+
+      setAccuracyRate(updatedAccuracy);
+      setWordsCompleted(nextWordsCompleted);
+      setTotalDrills(nextTotalDrills);
+      setCompletedWordAccuracy(avgAccuracy);
+      setCompletedWordXp(totalWordXp);
+      setWordCompletedModal(true);
+
+      awardXp(totalWordXp, `Mastered Word: ${currentWord.word}`, {
+        words_completed: nextWordsCompleted,
+        accuracy_rate: updatedAccuracy,
+        total_drills: nextTotalDrills
+      });
+
+      setTimeout(() => {
+        isAdvancingRef.current = false;
+      }, 1000);
+    }
+  }, [awardXp]);
+
+  const mpHandsRef = useRef(null);
+  const mpCameraRef = useRef(null);
+
+  // Sandbox Camera Lifecycle Functions
+  const stopSandboxCamera = useCallback(() => {
+    if (mpCameraRef.current) {
+      try { mpCameraRef.current.stop(); } catch (_) {}
+      mpCameraRef.current = null;
+    }
+    if (mpHandsRef.current) {
+      try { mpHandsRef.current.close(); } catch (_) {}
+      mpHandsRef.current = null;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    if (animRef.current) {
+      cancelAnimationFrame(animRef.current);
+      animRef.current = null;
+    }
+    setSandboxCameraActive(false);
+    setCameraLoading(false);
+    setHandDetected(false);
+    setDetectedLetter('—');
+    setLiveAccuracy(0);
+    setHoldProgress(0);
+    consecutiveMatchesRef.current = 0;
+  }, []);
+
+  const startSandboxCamera = useCallback(async () => {
+    setCameraError(null);
+    setCameraLoading(true);
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error('Camera API not supported in this browser.');
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+          facingMode: 'user'
+        },
+        audio: false
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+      setSandboxCameraActive(true);
+      setSandboxSimMode(false);
+      setCameraLoading(false);
+
+      // Initialize MediaPipe Hands if available
+      if (window.Hands) {
+        const hands = new window.Hands({
+          locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+        });
+
+        hands.setOptions({
+          maxNumHands: 1,
+          modelComplexity: 0,
+          minDetectionConfidence: 0.45,
+          minTrackingConfidence: 0.45
+        });
+
+        hands.onResults((results) => {
+          const canvas = canvasRef.current;
+          const video = videoRef.current;
+          if (!canvas || !video) return;
+
+          const ctx = canvas.getContext('2d');
+          canvas.width = video.videoWidth || 640;
+          canvas.height = video.videoHeight || 480;
+
+          // Draw mirrored camera feed
+          ctx.save();
+          ctx.translate(canvas.width, 0);
+          ctx.scale(-1, 1);
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          ctx.restore();
+
+          if (results.multiHandLandmarks?.length > 0) {
+            const rawLm = results.multiHandLandmarks[0];
+            setHandDetected(true);
+
+            // Draw user's actual detected landmarks and skeleton
+            ctx.lineWidth = 2.5;
+            ctx.strokeStyle = '#3ddc84';
+            handBones.forEach(([i1, i2]) => {
+              const p1 = rawLm[i1];
+              const p2 = rawLm[i2];
+              if (p1 && p2) {
+                ctx.beginPath();
+                ctx.moveTo((1 - p1.x) * canvas.width, p1.y * canvas.height);
+                ctx.lineTo((1 - p2.x) * canvas.width, p2.y * canvas.height);
+                ctx.stroke();
+              }
+            });
+
+            rawLm.forEach((pt, idx) => {
+              const isTip = idx === 0 || idx % 4 === 0;
+              ctx.beginPath();
+              ctx.arc((1 - pt.x) * canvas.width, pt.y * canvas.height, isTip ? 5 : 3, 0, 2 * Math.PI);
+              ctx.fillStyle = isTip ? '#FFD700' : '#FFFFFF';
+              ctx.fill();
+              ctx.strokeStyle = '#703F37';
+              ctx.lineWidth = 1;
+              ctx.stroke();
+            });
+
+            // Normalize and evaluate against target letter for human intelligibility
+            const norm = normalizeLandmarks(rawLm);
+            const targetChar = currentTargetLetterRef.current;
+            const { accuracy, predictedLetter, understood } = evaluateLandmarks(norm, targetChar);
+
+            setLiveAccuracy(accuracy);
+            setDetectedLetter(predictedLetter);
+
+            // Hold detection: Only triggers when the CURRENT target letter is genuinely matched and held for ~0.35s (5 frames)
+            if (understood && !isAdvancingRef.current) {
+              consecutiveMatchesRef.current += 1;
+              setHoldProgress(Math.min(100, consecutiveMatchesRef.current * 20));
+
+              if (consecutiveMatchesRef.current >= 5) {
+                consecutiveMatchesRef.current = 0;
+                handleConfirmSandboxLetter(accuracy);
+              }
+            } else {
+              consecutiveMatchesRef.current = 0;
+              setHoldProgress(0);
+            }
+          } else {
+            // No hand currently visible
+            setHandDetected(false);
+            setDetectedLetter('—');
+            setLiveAccuracy(0);
+            setHoldProgress(0);
+            consecutiveMatchesRef.current = 0;
+
+            // Draw guide reticle when hand is not yet detected
+            const boxW = Math.min(canvas.width * 0.46, 280);
+            const boxH = Math.min(canvas.height * 0.65, 340);
+            const boxX = (canvas.width - boxW) / 2;
+            const boxY = (canvas.height - boxH) / 2;
+
+            ctx.strokeStyle = 'rgba(230, 14, 126, 0.4)';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([8, 8]);
+            ctx.strokeRect(boxX, boxY, boxW, boxH);
+            ctx.setLineDash([]);
+          }
+        });
+
+
+        mpHandsRef.current = hands;
+
+        if (window.Camera && videoRef.current) {
+          const cam = new window.Camera(videoRef.current, {
+            onFrame: async () => {
+              if (mpHandsRef.current && videoRef.current) {
+                try {
+                  await mpHandsRef.current.send({ image: videoRef.current });
+                } catch (_) {}
+              }
+            },
+            width: 640,
+            height: 480
+          });
+          cam.start();
+          mpCameraRef.current = cam;
+        }
+      }
+    } catch (err) {
+      console.warn('[Sandbox] Camera access failed:', err.message);
+      setCameraLoading(false);
+      setCameraError(err.message || 'Camera permission denied or camera is in use by another app.');
+      setSandboxSimMode(true);
+    }
+  }, [normalizeLandmarks, evaluateLandmarks, currentTargetLetter, handleConfirmSandboxLetter]);
+
+
+  // Stop camera when leaving sandbox tab
+  useEffect(() => {
+    if (activeTab !== 'sandbox') {
+      stopSandboxCamera();
+    }
+    return () => {
+      stopSandboxCamera();
+    };
+  }, [activeTab, stopSandboxCamera]);
 
   // Auth Protection Gate: Require sign in to access Playground
   if (!user) {
@@ -470,6 +903,11 @@ export default function PlaygroundView({ navigate, onOpenAuth }) {
             <span>{streak} Day Streak</span>
           </div>
 
+          <div className="hud-stat-pill accuracy-pill" title="Synchronized ASL precision accuracy">
+            <AwardIcon size={15} />
+            <span>{typeof accuracyRate === 'number' ? `${accuracyRate.toFixed(1)}%` : '100.0%'} Accuracy</span>
+          </div>
+
           <button
             type="button"
             className="hud-stat-pill ach-pill"
@@ -508,15 +946,6 @@ export default function PlaygroundView({ navigate, onOpenAuth }) {
 
           <button
             type="button"
-            className={`playground-tab ${activeTab === 'words' ? 'active' : ''}`}
-            onClick={() => setActiveTab('words')}
-          >
-            <SparklesIcon size={16} />
-            <span>Word Studio</span>
-          </button>
-
-          <button
-            type="button"
             className={`playground-tab ${activeTab === 'sandbox' ? 'active' : ''}`}
             onClick={() => setActiveTab('sandbox')}
           >
@@ -531,9 +960,7 @@ export default function PlaygroundView({ navigate, onOpenAuth }) {
               ? 'Study 21-point hand anatomy and finger configurations for each letter.'
               : activeTab === 'quiz'
               ? 'Test reflex recognition with rapid-fire 30s challenges.'
-              : activeTab === 'words'
-              ? 'Spell real-world vocabulary sign-by-sign.'
-              : 'Interactive Euclidean distance landmark matcher with audio speech output.'}
+              : 'Interactive camera-powered word spelling practice with real-time accuracy scoring.'}
           </span>
         </div>
       </div>
@@ -781,161 +1208,335 @@ export default function PlaygroundView({ navigate, onOpenAuth }) {
         </div>
       )}
 
-      {/* 5. TAB 3: Word Studio */}
-      {activeTab === 'words' && (
-        <div className="pg-words-container">
-          {/* Word Selector Chips */}
-          <div className="word-selector-ribbon">
-            <span className="word-ribbon-label">Select Challenge:</span>
-            <div className="word-chips-list">
+
+      {/* 6. TAB 4: Live Accuracy Sandbox */}
+      {activeTab === 'sandbox' && (
+        <div className="pg-sandbox-container">
+          {/* Word Challenge Selector Ribbon */}
+          <div className="sandbox-challenge-ribbon">
+            <div className="ribbon-label-wrap">
+              <SparklesIcon size={16} />
+              <span className="ribbon-label">Select Practice Word Challenge:</span>
+            </div>
+            <div className="sandbox-word-chips">
               {wordChallenges.map((w) => (
                 <button
                   key={w.id}
                   type="button"
-                  className={`word-challenge-chip ${selectedWord.id === w.id ? 'active' : ''}`}
-                  onClick={() => handleSelectWord(w)}
+                  className={`sandbox-word-chip ${sandboxWord.id === w.id ? 'active' : ''}`}
+                  onClick={() => handleSelectSandboxWord(w)}
                 >
-                  <strong>{w.word}</strong>
-                  <span className="word-reward-tag">+{w.xpReward} XP</span>
+                  <strong className="chip-word">{w.word}</strong>
+                  <span className="chip-xp">+{w.xpReward} XP</span>
+                  <span className="chip-diff">{w.level}</span>
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="word-stage-card">
-            <div className="word-spelling-header">
-              <div>
-                <h3>Spell "{selectedWord.word}" in ASL</h3>
-                <p>{selectedWord.meaning}</p>
-              </div>
-              <span className="word-difficulty-badge">{selectedWord.level}</span>
-            </div>
-
-            {/* Letter Spelling Blocks */}
-            <div className="spelling-blocks-row">
-              {selectedWord.letters.map((char, idx) => {
-                const isCurrent = idx === spellingIndex && !wordSuccess;
-                const isPassed = idx < spellingIndex || wordSuccess;
-
-                return (
-                  <div
-                    key={idx}
-                    className={`spell-block ${isCurrent ? 'current' : ''} ${isPassed ? 'passed' : ''}`}
-                  >
-                    <span className="spell-char">{char}</span>
-                    <span className="spell-num">#{idx + 1}</span>
+          {/* Main 2-Column Practice Arena */}
+          <div className="pg-sandbox-arena">
+            {/* Left Column: Live Camera Video Stream & Canvas HUD */}
+            <div className="sandbox-camera-card">
+              <div className="sandbox-card-header">
+                <div className="camera-header-left">
+                  <div className="camera-live-badge">
+                    <span className={`live-pulse-dot ${sandboxCameraActive ? 'active' : ''}`} />
+                    <strong>{sandboxCameraActive ? 'Live Camera Feed' : 'Camera Standby'}</strong>
                   </div>
-                );
-              })}
-            </div>
-
-            {/* Current Target Letter Preview */}
-            {!wordSuccess ? (
-              <div className="current-spell-focus">
-                <p className="spell-instruction">
-                  Form the letter <strong>{selectedWord.letters[spellingIndex]}</strong> with your hand:
-                </p>
-
-                <button
-                  type="button"
-                  className="btn btn-primary spell-next-btn"
-                  onClick={handleAdvanceWordSpell}
-                >
-                  <CheckIcon size={16} />
-                  <span>
-                    Confirm Sign "{selectedWord.letters[spellingIndex]}" (Step {spellingIndex + 1}/{selectedWord.letters.length})
+                  <span className="model-status-tag">
+                    {modelServerOnline ? 'Local ML Engine ✓' : 'In-Browser Geometry Matcher ✓'}
                   </span>
-                </button>
-              </div>
-            ) : (
-              <div className="word-success-banner">
-                <SparklesIcon size={32} />
-                <h4>Word Mastered: {selectedWord.word}!</h4>
-                <p>Awarded <strong>+{selectedWord.xpReward} XP</strong> to your profile.</p>
-                <button
-                  type="button"
-                  className="btn btn-outline mini-btn"
-                  onClick={() => handleSelectWord(selectedWord)}
-                >
-                  <RotateCwIcon size={14} />
-                  <span>Practice Again</span>
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+                </div>
 
-      {/* 6. TAB 4: Live Accuracy Sandbox */}
-      {activeTab === 'sandbox' && (
-        <div className="pg-sandbox-layout">
-          <div className="sandbox-stream-card">
-            <div className="sandbox-stream-header">
-              <div>
-                <h4>Live MediaPipe Vector Matcher</h4>
-                <p>On-device mathematical Euclidean distance classifier simulation.</p>
+                <div className="camera-header-actions">
+                  {!sandboxCameraActive ? (
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      onClick={startSandboxCamera}
+                      disabled={cameraLoading}
+                    >
+                      {cameraLoading ? <SpinnerIcon size={14} /> : <CameraIcon size={14} />}
+                      <span>{cameraLoading ? 'Starting...' : 'Start Camera'}</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-sm"
+                      onClick={stopSandboxCamera}
+                    >
+                      <CloseIcon size={14} />
+                      <span>Stop Camera</span>
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="sandbox-confidence-badge">
-                <span>CONFIDENCE: {sandboxConfidence}%</span>
+
+              {/* Viewport Area */}
+              <div className="sandbox-viewport-frame">
+                {/* Hidden video element for WebRTC frame capture */}
+                <video
+                  ref={videoRef}
+                  className="sandbox-native-video"
+                  playsInline
+                  muted
+                  autoPlay
+                />
+
+                {/* Overlay Canvas with Hand Landmarks and Scanning Reticle */}
+                {sandboxCameraActive ? (
+                  <canvas ref={canvasRef} className="sandbox-render-canvas" />
+                ) : (
+                  <div className="sandbox-empty-cam-hero">
+                    <div className="empty-cam-icon-wrap">
+                      <CameraIcon size={40} />
+                    </div>
+                    <h4>Webcam Standby</h4>
+                    <p>
+                      Enable your camera to practice signing <strong>"{sandboxWord.word}"</strong> in real-time.
+                      SignSpeak evaluates 21 hand keypoints on-device with zero video recording.
+                    </p>
+                    {cameraError && (
+                      <div className="camera-error-banner">
+                        <AlertTriangleIcon size={15} />
+                        <span>{cameraError}</span>
+                      </div>
+                    )}
+                    <div className="empty-cam-btn-row">
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={startSandboxCamera}
+                        disabled={cameraLoading}
+                      >
+                        {cameraLoading ? <SpinnerIcon size={16} /> : <CameraIcon size={16} />}
+                        <span>{cameraLoading ? 'Requesting Camera...' : 'Enable Live Camera'}</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Real-time HUD Telemetry Overlays */}
+                {sandboxCameraActive && (
+                  <div className="sandbox-viewport-hud">
+                    <div className="hud-metric-pill target-pill">
+                      <TargetIcon size={13} />
+                      <span>TARGET: <strong>{currentTargetLetter}</strong></span>
+                    </div>
+
+                    <div className="hud-metric-pill accuracy-hud-pill">
+                      <ZapIcon size={13} />
+                      <span>MATCH: <strong>{liveAccuracy}%</strong></span>
+                    </div>
+
+                    <div className="hud-metric-pill detected-pill">
+                      <span className="live-dot" />
+                      <span>DETECTED: <strong>{detectedLetter}</strong></span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Live Hold Stability Progress Overlay */}
+                {holdProgress > 0 && (
+                  <div className="sandbox-hold-indicator">
+                    <div className="hold-indicator-card">
+                      <div className="hold-text-row">
+                        <span>Holding Sign "{currentTargetLetter}"...</span>
+                        <strong>{holdProgress}%</strong>
+                      </div>
+                      <div className="hold-track">
+                        <div className="hold-fill" style={{ width: `${holdProgress}%` }} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Camera Card Footer Controls */}
+              <div className="sandbox-footer-controls">
+                <div className="footer-tips-text">
+                  <span>💡 Tip: Place your hand inside the camera frame in good lighting. Sign each letter clearly to advance.</span>
+                </div>
               </div>
             </div>
 
-            <div className="sandbox-stream-canvas">
-              {/* Synthetic Camera Landmark Overlay */}
-              <div className="sandbox-camera-grid" />
-              <svg viewBox="0 0 100 100" className="pg-hand-svg sandbox-svg">
-                {handBones.map(([from, to], idx) => {
-                  const targetObj = aslAlphabet.find((a) => a.letter === sandboxLetter) || aslAlphabet[0];
-                  return (
-                    <line
-                      key={`sb-${idx}`}
-                      x1={targetObj.landmarks[from]?.x || 50}
-                      y1={targetObj.landmarks[from]?.y || 50}
-                      x2={targetObj.landmarks[to]?.x || 50}
-                      y2={targetObj.landmarks[to]?.y || 50}
-                      className="pg-bone-line"
-                    />
-                  );
-                })}
-                {(aslAlphabet.find((a) => a.letter === sandboxLetter) || aslAlphabet[0]).landmarks.map((pt, idx) => (
-                  <circle
-                    key={`sp-${idx}`}
-                    cx={pt.x + (Math.sin(sandboxJitter + idx) * 0.6)}
-                    cy={pt.y + (Math.cos(sandboxJitter + idx) * 0.6)}
-                    r={idx === 0 || idx % 4 === 0 ? 3.4 : 2.0}
-                    className={`pg-node-point ${idx % 4 === 0 ? 'node-tip' : ''}`}
-                  />
-                ))}
-              </svg>
-
-              <div className="sandbox-hud-overlay">
-                <div className="hud-metric-pill">
-                  <span className="live-dot" />
-                  <span>PREDICTED LETTER: {sandboxLetter}</span>
+            {/* Right Column: Word Challenge Progress & Target Anatomy Guide */}
+            <div className="sandbox-guide-col">
+              {/* Word Spelling Track Card */}
+              <div className="sandbox-word-progress-card">
+                <div className="word-progress-head">
+                  <div>
+                    <span className="card-kicker">CHALLENGE WORD</span>
+                    <h3>Spell "{sandboxWord.word}" in ASL</h3>
+                    <p className="word-meaning-sub">{sandboxWord.meaning}</p>
+                  </div>
+                  <span className="word-diff-tag">{sandboxWord.level}</span>
                 </div>
-                <div className="hud-metric-pill">
-                  <span>LATENCY: 14.2ms</span>
+
+                {/* Letter Step Blocks */}
+                <div className="word-spelling-blocks">
+                  {sandboxWord.letters.map((char, idx) => {
+                    const isPassed = idx < sandboxStep;
+                    const isCurrent = idx === sandboxStep;
+                    return (
+                      <div
+                        key={idx}
+                        className={`spell-block-item ${isCurrent ? 'current' : ''} ${isPassed ? 'passed' : ''}`}
+                      >
+                        <span className="block-letter">{char}</span>
+                        <span className="block-step">
+                          {isPassed ? '✓' : `#${idx + 1}`}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-            </div>
 
-            <div className="sandbox-controls-row">
-              <span className="controls-label">Test Different Handshape Coordinates:</span>
-              <div className="sandbox-letter-pills">
-                {['A', 'B', 'C', 'D', 'E', 'F', 'L', 'V', 'W', 'Y'].map((l) => (
-                  <button
-                    key={l}
-                    type="button"
-                    className={`sandbox-letter-btn ${sandboxLetter === l ? 'active' : ''}`}
-                    onClick={() => {
-                      setSandboxLetter(l);
-                      speakPhonetic(l);
-                    }}
-                  >
-                    {l}
-                  </button>
-                ))}
-              </div>
+              {/* If Word is Completed, show Inline Celebration Card */}
+              {wordCompletedModal ? (
+                <div className="sandbox-target-blueprint-card word-mastered-inline-card">
+                  <div className="celebrate-badge-icon">
+                    <TrophyIcon size={36} />
+                  </div>
+
+                  <h3>Word Mastered: {sandboxWord.word}!</h3>
+                  <p className="celebrate-sub">
+                    You signed all {sandboxWord.letters.length} letters of <strong>"{sandboxWord.word}"</strong>.
+                  </p>
+
+                  <div className="celebrate-stats-grid">
+                    <div className="cel-stat-box">
+                      <span className="cel-stat-label">Accuracy</span>
+                      <strong className="cel-stat-val highlight-green">{completedWordAccuracy}%</strong>
+                      <span className="cel-stat-sub">Intelligible</span>
+                    </div>
+
+                    <div className="cel-stat-box">
+                      <span className="cel-stat-label">XP Earned</span>
+                      <strong className="cel-stat-val">+{completedWordXp} XP</strong>
+                      <span className="cel-stat-sub">Saved to Profile</span>
+                    </div>
+
+                    <div className="cel-stat-box">
+                      <span className="cel-stat-label">Profile Score</span>
+                      <strong className="cel-stat-val">{accuracyRate.toFixed(1)}%</strong>
+                      <span className="cel-stat-sub">Overall Rating</span>
+                    </div>
+                  </div>
+
+                  <div className="celebrate-actions-row">
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={() => {
+                        const currIdx = wordChallenges.findIndex((w) => w.id === sandboxWord.id);
+                        const nextWord = wordChallenges[(currIdx + 1) % wordChallenges.length];
+                        handleSelectSandboxWord(nextWord);
+                      }}
+                    >
+                      <SparklesIcon size={16} />
+                      <span>Next Word Challenge →</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn btn-outline"
+                      onClick={() => handleSelectSandboxWord(sandboxWord)}
+                    >
+                      <RotateCwIcon size={15} />
+                      <span>Repeat "{sandboxWord.word}"</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Active Target Letter Blueprint Card */
+                <div className="sandbox-target-blueprint-card">
+                  <div className="blueprint-head">
+                    <div className="blueprint-letter-badge">
+                      <span className="blueprint-char">{currentTargetLetter}</span>
+                    </div>
+                    <div className="blueprint-meta">
+                      <div className="blueprint-title-row">
+                        <h4>Sign Letter "{currentTargetLetter}"</h4>
+                        <button
+                          type="button"
+                          className="blueprint-audio-btn"
+                          onClick={() => speakPhonetic(currentTargetLetter)}
+                          title="Pronounce letter"
+                        >
+                          <VolumeIcon size={15} />
+                        </button>
+                      </div>
+                      <span className="blueprint-cat">{targetLetterData.category}</span>
+                    </div>
+                  </div>
+
+                  <div className="blueprint-instruction-box">
+                    <strong>Hand Posture Instruction:</strong>
+                    <p>{targetLetterData.hint}</p>
+                  </div>
+
+                  {/* Mini 21-point Landmark Guide SVG */}
+                  <div className="blueprint-landmark-view">
+                    <span className="landmark-view-label">21-Point Joint Geometry Reference:</span>
+                    <div className="mini-landmark-svg-wrap">
+                      <svg viewBox="0 0 100 100" className="mini-landmark-svg">
+                        {handBones.map(([from, to], idx) => {
+                          const p1 = targetLetterData.landmarks[from];
+                          const p2 = targetLetterData.landmarks[to];
+                          if (!p1 || !p2) return null;
+                          return (
+                            <line
+                              key={`bp-bone-${idx}`}
+                              x1={p1.x}
+                              y1={p1.y}
+                              x2={p2.x}
+                              y2={p2.y}
+                              className="bp-bone-line"
+                            />
+                          );
+                        })}
+                        {targetLetterData.landmarks.map((pt, idx) => {
+                          const isTip = idx === 0 || idx % 4 === 0;
+                          return (
+                            <circle
+                              key={`bp-pt-${idx}`}
+                              cx={pt.x}
+                              cy={pt.y}
+                              r={isTip ? 3.5 : 2.0}
+                              className={`bp-pt-node ${isTip ? 'tip' : ''}`}
+                            />
+                          );
+                        })}
+                      </svg>
+                    </div>
+                  </div>
+
+                  {/* Precision Score & Telemetry Box */}
+                  <div className="blueprint-score-box">
+                    <div className="score-box-row">
+                      <span className="score-label">Readability Match:</span>
+                      <strong className="score-val highlight-green">
+                        {liveAccuracy > 0 ? `${liveAccuracy}%` : 'Waiting for hand...'}
+                      </strong>
+                    </div>
+                    <div className="score-meter-track">
+                      <div
+                        className="score-meter-fill"
+                        style={{
+                          width: `${liveAccuracy}%`,
+                          backgroundColor: liveAccuracy >= 80 ? 'var(--sdg-pink)' : liveAccuracy >= 60 ? 'var(--rose)' : 'var(--sand)'
+                        }}
+                      />
+                    </div>
+                    <span className="score-sync-sub">
+                      Profile Accuracy Score: <strong>{accuracyRate.toFixed(1)}%</strong>
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

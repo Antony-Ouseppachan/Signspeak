@@ -195,6 +195,38 @@ export const aslAlphabet = [
     ]
   },
   {
+    letter: 'M',
+    category: 'Fingers Over Thumb',
+    difficulty: 'Intermediate',
+    xp: 30,
+    hint: 'Three fingers (index, middle, ring) folded over the thumb, with the thumb tip resting under the ring finger.',
+    funFact: 'Three knuckles visible on top represent the three legs of the letter M.',
+    audioWord: 'M',
+    landmarks: [
+      { x: 50, y: 90 }, { x: 42, y: 78 }, { x: 46, y: 68 }, { x: 56, y: 64 }, { x: 64, y: 66 },
+      { x: 40, y: 52 }, { x: 42, y: 44 }, { x: 44, y: 54 }, { x: 44, y: 64 },
+      { x: 48, y: 50 }, { x: 50, y: 42 }, { x: 52, y: 52 }, { x: 52, y: 64 },
+      { x: 56, y: 52 }, { x: 58, y: 44 }, { x: 60, y: 54 }, { x: 60, y: 66 },
+      { x: 64, y: 58 }, { x: 64, y: 68 }, { x: 64, y: 78 }, { x: 64, y: 84 }
+    ]
+  },
+  {
+    letter: 'N',
+    category: 'Fingers Over Thumb',
+    difficulty: 'Intermediate',
+    xp: 30,
+    hint: 'Two fingers (index and middle) folded over the thumb so the thumb tip peeks out between the middle and ring fingers.',
+    funFact: 'Two knuckles resting over the thumb represent the two downward stems of the letter N.',
+    audioWord: 'N',
+    landmarks: [
+      { x: 50, y: 90 }, { x: 42, y: 78 }, { x: 46, y: 68 }, { x: 52, y: 64 }, { x: 58, y: 66 },
+      { x: 40, y: 52 }, { x: 42, y: 44 }, { x: 44, y: 54 }, { x: 44, y: 64 },
+      { x: 48, y: 50 }, { x: 50, y: 42 }, { x: 52, y: 52 }, { x: 52, y: 64 },
+      { x: 56, y: 54 }, { x: 56, y: 66 }, { x: 56, y: 76 }, { x: 56, y: 82 },
+      { x: 64, y: 58 }, { x: 64, y: 68 }, { x: 64, y: 78 }, { x: 64, y: 84 }
+    ]
+  },
+  {
     letter: 'O',
     category: 'Vowels & Core',
     difficulty: 'Beginner',
@@ -208,6 +240,22 @@ export const aslAlphabet = [
       { x: 48, y: 50 }, { x: 48, y: 36 }, { x: 50, y: 42 }, { x: 50, y: 54 },
       { x: 56, y: 52 }, { x: 56, y: 38 }, { x: 56, y: 44 }, { x: 54, y: 56 },
       { x: 64, y: 56 }, { x: 64, y: 44 }, { x: 62, y: 50 }, { x: 58, y: 60 }
+    ]
+  },
+  {
+    letter: 'P',
+    category: 'Downward Shapes',
+    difficulty: 'Intermediate',
+    xp: 30,
+    hint: 'Hand tilted downward with index pointing forward, middle finger bent straight down, and thumb touching middle knuckle.',
+    funFact: 'The shape is an inverted letter K pointing towards the ground.',
+    audioWord: 'P',
+    landmarks: [
+      { x: 50, y: 90 }, { x: 42, y: 78 }, { x: 44, y: 66 }, { x: 48, y: 58 }, { x: 52, y: 54 },
+      { x: 40, y: 50 }, { x: 52, y: 46 }, { x: 66, y: 44 }, { x: 80, y: 42 },
+      { x: 46, y: 52 }, { x: 48, y: 64 }, { x: 50, y: 76 }, { x: 50, y: 88 },
+      { x: 54, y: 56 }, { x: 56, y: 66 }, { x: 56, y: 76 }, { x: 54, y: 82 },
+      { x: 62, y: 60 }, { x: 64, y: 70 }, { x: 64, y: 80 }, { x: 62, y: 84 }
     ]
   },
   {
@@ -319,6 +367,14 @@ export const wordChallenges = [
   },
   {
     id: 'w2',
+    word: 'SIGN',
+    level: 'Beginner',
+    xpReward: 50,
+    meaning: 'Visual language expression',
+    letters: ['S', 'I', 'G', 'N']
+  },
+  {
+    id: 'w3',
     word: 'PEACE',
     level: 'Intermediate',
     xpReward: 90,
@@ -326,7 +382,7 @@ export const wordChallenges = [
     letters: ['P', 'E', 'A', 'C', 'E']
   },
   {
-    id: 'w3',
+    id: 'w4',
     word: 'VOICE',
     level: 'Intermediate',
     xpReward: 100,
@@ -334,7 +390,23 @@ export const wordChallenges = [
     letters: ['V', 'O', 'I', 'C', 'E']
   },
   {
-    id: 'w4',
+    id: 'w5',
+    word: 'LOVE',
+    level: 'Beginner',
+    xpReward: 55,
+    meaning: 'Care, warmth and connection',
+    letters: ['L', 'O', 'V', 'E']
+  },
+  {
+    id: 'w6',
+    word: 'WORLD',
+    level: 'Intermediate',
+    xpReward: 95,
+    meaning: 'Global inclusive accessibility',
+    letters: ['W', 'O', 'R', 'L', 'D']
+  },
+  {
+    id: 'w7',
     word: 'ACCESS',
     level: 'Advanced',
     xpReward: 140,

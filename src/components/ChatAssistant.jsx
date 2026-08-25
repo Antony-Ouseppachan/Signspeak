@@ -96,7 +96,7 @@ const KB = [
   {
     id: 'playground',
     tags: ['playground', 'learn', 'study', 'practice', 'gamification', 'quiz', 'xp', 'level', 'achievement', 'streak', 'module'],
-    answer: `The **SignSpeak Learning Playground** is a gamified ASL study module — login required to track your progress:\n\n- **Lab Mode** — Practice individual letters with real-time feedback\n- **Quiz Mode** — Test your knowledge with timed letter recognition challenges\n- **Word Studio** — Spell out full words using ASL signs\n- **Accuracy Sandbox** — Fine-tune your signing precision\n\nYour XP, streaks, and expertise tier (Novice Signer → ASL Master) are synced to your profile and persisted in the cloud.`,
+    answer: `The **SignSpeak Learning Playground** is a gamified ASL study module — login required to track your progress:\n\n- **Lab Mode** — Practice individual letters with real-time feedback\n- **Quiz Mode** — Test your knowledge with timed letter recognition challenges\n- **Word** — Spell out full words using ASL signs\n- **Accuracy Sandbox** — Fine-tune your signing precision\n\nYour XP, streaks, and expertise tier (Novice Signer → ASL Master) are synced to your profile and persisted in the cloud.`,
   },
   {
     id: 'xp_levels',

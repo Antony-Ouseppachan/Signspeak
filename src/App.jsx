@@ -32,7 +32,9 @@ import {
   EyeIcon,
   EyeOffIcon,
   ExtensionIcon,
-  PlaygroundIcon
+  PlaygroundIcon,
+  MenuIcon,
+  HomeIcon
 } from './components/Icons.jsx';
 import PlaygroundView from './components/PlaygroundView.jsx';
 import { metrics, featureModules, comparisonPoints, sdgGoals, limitations } from './data/content.js';
@@ -1349,6 +1351,7 @@ function ProfileModal({ onClose }) {
 export default function App() {
   const { user, profile, loading: authLoading, signOutUser } = useAuth();
   const [splash, setSplash] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [view, setView] = useState(() => {
     const hash = window.location.hash.slice(1);
     return ['about', 'playground', 'contact', 'feedback', 'profile', 'admin'].includes(hash) ? hash : 'about';
@@ -1375,6 +1378,7 @@ export default function App() {
 
   function navigate(nextView) {
     setView(nextView);
+    setMobileMenuOpen(false);
     window.history.replaceState(null, '', `#${nextView}`);
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
@@ -1383,7 +1387,6 @@ export default function App() {
   const userPhoto = profile?.photo_url || user?.photoURL;
 
   // Detect if user signed in for the first time without a personalized display name
-  // Wait until auth and profile are fully resolved to prevent split-second flash on refresh
   const effectiveName = profile?.display_name || user?.displayName || '';
   const needsOnboarding = Boolean(
     !authLoading &&
@@ -1397,7 +1400,111 @@ export default function App() {
   return (
     <>
       {splash && <Splash onDismiss={handleDismissSplash} />}
+
+      {/* Mobile Drawer Overlay */}
+      <div
+        className={`mobile-drawer-backdrop ${mobileMenuOpen ? 'open' : ''}`}
+        onClick={() => setMobileMenuOpen(false)}
+        aria-hidden={!mobileMenuOpen}
+      />
+
+      {/* Mobile Navigation Slide-Out Drawer */}
+      <aside className={`mobile-nav-drawer ${mobileMenuOpen ? 'open' : ''}`} aria-label="Mobile Navigation">
+        <div className="mobile-drawer-head">
+          <div className="mobile-drawer-brand" onClick={() => navigate('about')}>
+            <Logo className="mini-logo" />
+            <span>SignSpeak</span>
+          </div>
+          <button
+            type="button"
+            className="mobile-drawer-close"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-label="Close navigation drawer"
+          >
+            <CloseIcon size={20} />
+          </button>
+        </div>
+
+        {/* User Card in Drawer */}
+        <div className="mobile-drawer-user-card">
+          {user ? (
+            <div className="drawer-user-info" onClick={() => navigate('profile')}>
+              <div className="drawer-avatar">
+                {userPhoto ? (
+                  <img src={userPhoto} alt={userDisplayName} className="drawer-avatar-img" />
+                ) : (
+                  <span className="drawer-avatar-init">{userDisplayName.charAt(0).toUpperCase()}</span>
+                )}
+              </div>
+              <div className="drawer-user-meta">
+                <strong>{userDisplayName}</strong>
+                <span>{profile?.email || user?.email}</span>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-primary drawer-auth-btn"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                setAuthModalOpen(true);
+              }}
+            >
+              <UserIcon size={16} />
+              <span>Sign In / Create Account</span>
+            </button>
+          )}
+        </div>
+
+        <nav className="mobile-drawer-navlinks">
+          {[
+            { key: 'about', label: 'Home Platform', Icon: PlatformIcon, desc: 'Architecture, Demo & Mission' },
+            { key: 'playground', label: 'ASL Playground', Icon: PlaygroundIcon, desc: 'Interactive Dictionary & Sandbox' },
+            { key: 'profile', label: 'My Profile & Mastery', Icon: UserIcon, desc: 'Study Telemetry & XP Streaks' },
+            { key: 'admin', label: 'Admin Console', Icon: ShieldIcon, desc: 'User Management & Metrics' },
+            { key: 'contact', label: 'Contact Support', Icon: ContactIcon, desc: 'Questions & Technical Inquiries' },
+            { key: 'feedback', label: 'Submit Feedback', Icon: FeedbackIcon, desc: 'Share Accuracy & Experience' },
+          ].map(({ key, label, Icon, desc }) => (
+            <button
+              key={key}
+              type="button"
+              className={`drawer-navlink ${view === key ? 'active' : ''}`}
+              onClick={() => navigate(key)}
+            >
+              <span className="drawer-nav-icon"><Icon size={20} /></span>
+              <div className="drawer-nav-txt">
+                <strong>{label}</strong>
+                <span>{desc}</span>
+              </div>
+              {view === key && <span className="drawer-active-dot" />}
+            </button>
+          ))}
+        </nav>
+
+        <div className="mobile-drawer-footer">
+          <div className="drawer-guarantee-pill">
+            <ShieldIcon size={14} />
+            <span>100% On-Device ASL Machine Learning</span>
+          </div>
+          {user && (
+            <button
+              type="button"
+              className="btn btn-outline drawer-signout-btn"
+              onClick={async () => {
+                await signOutUser();
+                setMobileMenuOpen(false);
+                navigate('about');
+              }}
+            >
+              <LogOutIcon size={15} />
+              <span>Sign Out</span>
+            </button>
+          )}
+        </div>
+      </aside>
+
       <div className="shell">
+        {/* Desktop Sidebar (hidden on mobile) */}
         <nav className="sidebar" aria-label="Primary">
           <div className="mark" onClick={() => navigate('about')} role="button" tabIndex={0} title="SignSpeak Home">
             <Logo />
@@ -1424,10 +1531,23 @@ export default function App() {
         </nav>
 
         <main className="main">
+          {/* Topbar Header */}
           <header className="topbar">
-            <div className="brand" onClick={() => navigate('about')} style={{ cursor: 'pointer' }}>
-              <Logo className="mini-logo" />
-              <span>SignSpeak</span>
+            <div className="topbar-left">
+              {/* Mobile Hamburger Trigger */}
+              <button
+                type="button"
+                className="mobile-menu-toggle-btn"
+                onClick={() => setMobileMenuOpen(true)}
+                aria-label="Open mobile navigation menu"
+              >
+                <MenuIcon size={22} />
+              </button>
+
+              <div className="brand" onClick={() => navigate('about')} style={{ cursor: 'pointer' }}>
+                <Logo className="mini-logo" />
+                <span>SignSpeak</span>
+              </div>
             </div>
 
             <div className="topbar-actions">
@@ -1447,14 +1567,13 @@ export default function App() {
                 <span>Get Extension</span>
               </button>
 
-              <button className="btn btn-primary quick-demo-btn" onClick={() => {
-                if (view !== 'about') navigate('about');
-                setTimeout(() => {
-                  const el = document.getElementById('interactive-demo');
-                  if (el) el.scrollIntoView({ behavior: 'smooth' });
-                }, 100);
-              }}>
-                Try Sandbox
+              <button
+                className="btn btn-primary quick-demo-btn"
+                onClick={() => {
+                  if (view !== 'playground') navigate('playground');
+                }}
+              >
+                <span>Playground</span>
               </button>
 
               {user ? (
@@ -1495,19 +1614,65 @@ export default function App() {
             </div>
           </header>
 
-          {view === 'about' ? (
-            <HomeView navigate={navigate} />
-          ) : view === 'playground' ? (
-            <PlaygroundView navigate={navigate} onOpenAuth={() => setAuthModalOpen(true)} />
-          ) : view === 'profile' ? (
-            <ProfileView navigate={navigate} />
-          ) : view === 'admin' ? (
-            <AdminDashboard onOpenAuth={() => setAuthModalOpen(true)} navigate={navigate} />
-          ) : (
-            <FormView type={view} onOpenAuth={() => setAuthModalOpen(true)} />
-          )}
+          {/* View Container */}
+          <div className="page-content-wrapper">
+            {view === 'about' ? (
+              <HomeView navigate={navigate} />
+            ) : view === 'playground' ? (
+              <PlaygroundView navigate={navigate} onOpenAuth={() => setAuthModalOpen(true)} />
+            ) : view === 'profile' ? (
+              <ProfileView navigate={navigate} />
+            ) : view === 'admin' ? (
+              <AdminDashboard onOpenAuth={() => setAuthModalOpen(true)} navigate={navigate} />
+            ) : (
+              <FormView type={view} onOpenAuth={() => setAuthModalOpen(true)} />
+            )}
+          </div>
         </main>
       </div>
+
+      {/* Mobile Bottom Navigation Bar (Docked to Bottom on < 768px) */}
+      <nav className="mobile-bottom-nav" aria-label="Mobile Navigation Bar">
+        <button
+          type="button"
+          className={`bottom-nav-item ${view === 'about' ? 'active' : ''}`}
+          onClick={() => navigate('about')}
+        >
+          <HomeIcon size={20} />
+          <span>Home</span>
+          {view === 'about' && <span className="bottom-nav-glow" />}
+        </button>
+
+        <button
+          type="button"
+          className={`bottom-nav-item ${view === 'playground' ? 'active' : ''}`}
+          onClick={() => navigate('playground')}
+        >
+          <PlaygroundIcon size={20} />
+          <span>Playground</span>
+          {view === 'playground' && <span className="bottom-nav-glow" />}
+        </button>
+
+        <button
+          type="button"
+          className={`bottom-nav-item ${view === 'profile' ? 'active' : ''}`}
+          onClick={() => navigate('profile')}
+        >
+          <UserIcon size={20} />
+          <span>Profile</span>
+          {view === 'profile' && <span className="bottom-nav-glow" />}
+        </button>
+
+        <button
+          type="button"
+          className={`bottom-nav-item ${view === 'feedback' || view === 'contact' ? 'active' : ''}`}
+          onClick={() => navigate(view === 'contact' ? 'contact' : 'feedback')}
+        >
+          <FeedbackIcon size={20} />
+          <span>Feedback</span>
+          {(view === 'feedback' || view === 'contact') && <span className="bottom-nav-glow" />}
+        </button>
+      </nav>
 
       <ChatAssistant />
       {authModalOpen && <AuthModal onClose={() => setAuthModalOpen(false)} />}

@@ -270,6 +270,22 @@ export default function ProfileView({ navigate }) {
                   </strong>
                   <span className="metric-box-sub">{studyData.total_drills || 0} Drills Finished</span>
                 </div>
+
+                <div className="study-metric-box">
+                  <span className="metric-box-label">Accuracy Rate</span>
+                  <strong className="metric-box-val highlight-green">
+                    {studyData.accuracy_rate ? `${parseFloat(studyData.accuracy_rate).toFixed(1)}%` : '100.0%'}
+                  </strong>
+                  <span className="metric-box-sub">Live Signing Precision</span>
+                </div>
+
+                <div className="study-metric-box">
+                  <span className="metric-box-label">Words Mastered</span>
+                  <strong className="metric-box-val">
+                    {studyData.words_completed || 0} Words
+                  </strong>
+                  <span className="metric-box-sub">Sandbox Challenges</span>
+                </div>
               </div>
 
               <div className="profile-playground-cta-row">
