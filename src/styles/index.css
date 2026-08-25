@@ -35,6 +35,9 @@
 
 html {
   scroll-behavior: smooth;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -46,8 +49,11 @@ body {
   color: var(--text);
   font-family: 'Work Sans', system-ui, sans-serif;
   min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
   overflow-x: hidden;
   line-height: 1.5;
+  position: relative;
 }
 
 body:before {
@@ -660,6 +666,10 @@ a {
   position: relative;
   z-index: 2;
   background: linear-gradient(115deg, rgba(253, 250, 245, 0.3), transparent 35%);
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+  box-sizing: border-box;
 }
 
 .sidebar {
@@ -779,7 +789,25 @@ a {
 .main {
   flex: 1;
   min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
   position: relative;
+  box-sizing: border-box;
+}
+
+.page-content-wrapper {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+  box-sizing: border-box;
+}
+
+.home-view {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+  box-sizing: border-box;
 }
 
 .topbar {
@@ -795,6 +823,9 @@ a {
   background: rgba(245, 239, 230, 0.88);
   z-index: 30;
   min-height: 72px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5), 0 8px 24px rgba(58, 40, 31, 0.04);
 }
 
@@ -9832,7 +9863,7 @@ a {
 }
 
 /* =========================================================================
-   COMPREHENSIVE RESPONSIVE ADAPTATIONS & BREAKPOINTS
+   COMPREHENSIVE RESPONSIVE ADAPTATIONS & HOMEPAGE MODULES
    ========================================================================= */
 
 /* 1. Large Laptops / Tablets Landscape (max-width: 1200px) */
@@ -9848,6 +9879,9 @@ a {
   }
   .metrics-grid {
     grid-template-columns: repeat(3, 1fr);
+  }
+  .sandbox-grid {
+    gap: 24px;
   }
 }
 
@@ -9896,12 +9930,9 @@ a {
     justify-content: center;
   }
   .hero-visual {
-    max-width: 480px;
+    max-width: 460px;
     margin: 0 auto;
     width: 100%;
-  }
-  .hand-stage-canvas-wrap {
-    height: 340px !important;
   }
 
   /* Section Padding */
@@ -9914,26 +9945,39 @@ a {
     padding-right: 24px;
   }
 
-  /* Grids */
+  /* Homepage Grids Adaptation */
   .metrics-grid {
     grid-template-columns: repeat(3, 1fr);
     gap: 14px;
   }
-  .sdg-showcase-grid {
+  .sandbox-grid {
     grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .pipeline-interactive-section {
+    grid-template-columns: 1fr !important;
+    gap: 20px;
+  }
+  .comparison-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .features-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .sdg-showcase-grid {
+    grid-template-columns: 1fr !important;
     gap: 28px;
   }
   .sdg-poster-card {
-    max-width: 460px;
+    max-width: 480px;
     margin: 0 auto;
+    width: 100%;
   }
   .limitations-grid {
     grid-template-columns: 1fr;
     gap: 24px;
-  }
-  .features-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
   }
 
   /* Playground Arena 1-Column Layout */
@@ -9964,14 +10008,39 @@ a {
   }
 
   .topbar {
-    padding: 10px 16px;
-    min-height: 58px;
+    padding: 10px 14px;
+    min-height: 56px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    gap: 8px;
+  }
+  .topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex-shrink: 1;
+  }
+  .brand {
+    font-size: 17.5px;
+    gap: 8px;
+  }
+  .brand .mini-logo {
+    width: 24px;
+    height: 24px;
+  }
+  .topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
   }
   .topbar-actions .get-extension-btn {
     display: none;
   }
   .topbar-actions .quick-demo-btn {
-    padding: 6px 12px;
+    padding: 6px 10px;
     font-size: 12px;
   }
   .topbar-user-name {
@@ -9984,6 +10053,18 @@ a {
     padding: 6px 8px;
   }
 
+  /* Section Padding */
+  .section-block,
+  .metrics-banner-section,
+  .cta-final-banner,
+  .footer-industry,
+  .profile-view-section {
+    padding-left: 16px;
+    padding-right: 16px;
+    padding-top: 44px;
+    padding-bottom: 44px;
+  }
+
   /* Fluid Typography */
   .hero-title {
     font-size: clamp(28px, 7vw, 40px);
@@ -9993,8 +10074,15 @@ a {
     font-size: 14.5px;
     line-height: 1.6;
   }
+  .section-header {
+    margin-bottom: 28px;
+  }
   .section-header h2 {
-    font-size: clamp(24px, 5.5vw, 32px);
+    font-size: clamp(22px, 5.5vw, 30px);
+  }
+  .section-sub {
+    font-size: 14px;
+    line-height: 1.6;
   }
 
   /* Metrics Banner */
@@ -10003,7 +10091,7 @@ a {
     gap: 10px;
   }
   .metric-card {
-    padding: 14px 12px;
+    padding: 16px 12px;
   }
   .metric-value {
     font-size: 22px;
@@ -10012,32 +10100,281 @@ a {
     font-size: 12px;
   }
 
+  /* Interactive Demo */
+  .demo-sandbox-card {
+    padding: 20px 16px;
+    border-radius: 18px;
+  }
+  .sandbox-header {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+  }
+  .sandbox-header h3 {
+    font-size: 22px;
+  }
+  .sandbox-tab-group {
+    width: 100%;
+  }
+  .sandbox-tab-group .tab-btn {
+    flex: 1;
+    text-align: center;
+  }
+  .gesture-selector-box {
+    padding: 14px 12px;
+  }
+  .box-title-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .alphabet-filter-tabs {
+    width: 100%;
+    justify-content: space-between;
+    overflow-x: auto;
+  }
+  .gesture-grid.full-alphabet-grid {
+    grid-template-columns: repeat(2, 1fr);
+    max-height: 220px;
+  }
+  .meet-hud-panel {
+    padding: 16px 14px;
+  }
+  .meet-hud-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .preset-phrases-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    width: 100%;
+  }
+  .preset-chips {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .buffer-output {
+    font-size: 18px;
+    min-height: 54px;
+    padding: 12px 14px;
+  }
+  .buffer-actions {
+    flex-direction: column;
+  }
+  .speak-btn {
+    width: 100%;
+  }
+  .secondary-buffer-btns {
+    width: 100%;
+  }
+
+  /* Architecture Pipeline */
+  .pipeline-interactive-section {
+    grid-template-columns: 1fr !important;
+    gap: 18px;
+  }
+  .pipeline-steps-nav {
+    gap: 8px;
+  }
+  .pipeline-nav-btn {
+    padding: 12px 14px;
+  }
+  .step-btn-text strong {
+    font-size: 13.5px;
+  }
+  .pipeline-detail-card {
+    padding: 20px 16px;
+    border-radius: 16px;
+  }
+  .detail-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .detail-header h3 {
+    font-size: 20px;
+  }
+  .tensor-terminal {
+    max-width: 100%;
+  }
+  .terminal-content {
+    font-size: 11px;
+    padding: 10px 12px;
+  }
+
   /* Comparison Cards */
   .comparison-cards-grid {
     grid-template-columns: 1fr;
-    gap: 16px;
+    gap: 14px;
+  }
+  .comparison-card {
+    padding: 18px 16px;
+    border-radius: 16px;
   }
   .comp-card-body {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 10px;
+  }
+  .comp-side {
+    padding: 12px 14px;
   }
 
   /* Features Grid */
   .features-grid {
     grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .feature-module-card {
+    padding: 22px 18px;
+    border-radius: 16px;
+  }
+  .feature-module-card h3 {
+    font-size: 18px;
   }
 
-  /* Interactive Demo */
-  .demo-viewport-box {
-    height: 280px;
+  /* UN SDG 10 Section */
+  .sdg-block {
+    padding: 28px 16px;
+    border-radius: 20px;
   }
-  .demo-actions-row {
+  .sdg-section-head {
+    margin-bottom: 24px;
+  }
+  .sdg-section-head h2 {
+    font-size: clamp(22px, 5vw, 28px);
+  }
+  .sdg-sub-lead {
+    font-size: 14px;
+  }
+  .sdg-showcase-grid {
+    grid-template-columns: 1fr !important;
+    gap: 20px;
+  }
+  .sdg-poster-card {
+    padding: 18px 14px;
+  }
+  .sdg-poster-media {
+    max-width: 220px;
+  }
+  .sdg-full-image {
+    max-width: 190px !important;
+  }
+  .sdg-stat-box {
+    padding: 10px;
+  }
+  .stat-num {
+    font-size: 20px;
+  }
+  .sdg-targets-intro {
+    padding: 16px 14px;
+  }
+  .sdg-target-card {
+    padding: 14px 16px;
+  }
+
+  /* Developer Quickstart Terminal */
+  .quickstart-box {
+    border-radius: 16px;
+  }
+  .quickstart-nav {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .qs-step-btn {
+    padding: 12px 14px;
+    min-width: 140px;
+    font-size: 12px;
+  }
+  .qs-terminal-card {
+    padding: 16px 12px;
+  }
+  .qs-terminal-top {
     flex-direction: column;
-    width: 100%;
+    align-items: flex-start;
+    gap: 8px;
   }
-  .demo-actions-row .btn {
+  .qs-terminal-actions {
+    width: 100%;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .copy-btn {
     width: 100%;
     justify-content: center;
+    padding: 8px 12px;
+  }
+  .qs-code {
+    font-size: 11.5px;
+    padding: 14px 12px;
+  }
+
+  /* Scope & Limitations */
+  .limitations-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .limits-list-card, .roadmap-card {
+    padding: 20px 16px;
+    border-radius: 16px;
+  }
+  .limits-list-card h4, .roadmap-card h4 {
+    font-size: 18px;
+  }
+
+  /* FAQ Knowledge Base */
+  .faq-container {
+    max-width: 100%;
+  }
+  .faq-question-btn {
+    padding: 14px 16px;
+  }
+  .faq-q-text {
+    font-size: 14px;
+  }
+  .faq-answer {
+    padding: 0 16px 16px;
+    font-size: 13.5px;
+  }
+
+  /* CTA Final Banner */
+  .cta-final-banner {
+    padding: 32px 16px;
+  }
+  .cta-content {
+    padding: 36px 18px;
+    border-radius: 20px;
+  }
+  .cta-content h2 {
+    font-size: clamp(22px, 5.5vw, 30px);
+  }
+  .cta-content p {
+    font-size: 14px;
+    margin: 10px auto 22px;
+  }
+  .cta-btns {
+    flex-direction: column;
+    width: 100%;
+    gap: 10px;
+  }
+  .cta-btns .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Footer */
+  .footer-industry {
+    padding: 40px 16px 24px;
+  }
+  .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  .footer-bottom-row {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
   }
 
   /* Playground View */
@@ -10113,21 +10450,25 @@ a {
     width: 48px !important;
     height: 48px !important;
   }
-
-  /* Footer */
-  .footer-grid {
-    grid-template-columns: 1fr;
-    gap: 28px;
-  }
-  .footer-bottom-row {
-    flex-direction: column;
-    gap: 10px;
-    text-align: center;
-  }
 }
 
 /* 4. Small Mobile Phones (max-width: 480px) */
 @media (max-width: 480px) {
+  .topbar {
+    padding: 8px 12px;
+  }
+  .brand {
+    font-size: 16px;
+    gap: 6px;
+  }
+  .brand .mini-logo {
+    width: 22px;
+    height: 22px;
+  }
+  .topbar-actions .quick-demo-btn {
+    padding: 5px 8px;
+    font-size: 11px;
+  }
   .hero-section {
     padding: 24px 16px 20px;
   }
@@ -10157,13 +10498,13 @@ a {
     font-size: 20px;
   }
 
-  .section-block,
-  .metrics-banner-section,
-  .cta-final-banner,
-  .footer-industry,
-  .profile-view-section {
-    padding-left: 16px;
-    padding-right: 16px;
+  .gesture-grid.full-alphabet-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .sdg-highlights-stack {
+    grid-template-columns: 1fr;
+    gap: 8px;
   }
 
   .sandbox-viewport-frame {
