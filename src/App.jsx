@@ -255,14 +255,14 @@ function Hero({ navigate }) {
   const [heroLetter, setHeroLetter] = useState('V');
 
   return (
-    <section className="hero-section">
+    <section className="hero-section" id="hero">
       <div className="hero-inner">
         <div className="hero-copy">
           <div className="eyebrow-pill">
             <span className="pill-dot" />
             <span>ACCESSIBILITY TECH · ON-DEVICE GOOGLE MEET INTEGRATION</span>
           </div>
-          
+
           <h1 className="hero-title">
             Sign naturally in ASL.<br />
             They hear <span className="grad-accent">real-time speech.</span>
@@ -725,15 +725,15 @@ function PasswordCriteriaChecklist({ password }) {
 function AuthModal({ onClose, defaultMode = 'login' }) {
   const [mode, setMode] = useState(defaultMode); // 'login' | 'signup' | 'forgot'
   const { signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword, error: authContextError, isConfigured } = useAuth();
-  
+
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
+
   const [submitting, setSubmitting] = useState(false);
   const [localError, setLocalError] = useState('');
   const [successNotice, setSuccessNotice] = useState('');
@@ -747,7 +747,7 @@ function AuthModal({ onClose, defaultMode = 'login' }) {
   const numOk = /[0-9]/.test(password);
   const specOk = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(password);
   const isPasswordValid = lenOk && upperOk && lowerOk && numOk && specOk;
-  
+
   const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
   const isNameValid = displayName.trim().length >= 2;
   const isConfirmMatch = password === confirmPassword && confirmPassword.length > 0;
@@ -756,8 +756,8 @@ function AuthModal({ onClose, defaultMode = 'login' }) {
   const canSubmit = mode === 'login'
     ? isEmailValid && password.length >= 6
     : mode === 'signup'
-    ? isNameValid && isEmailValid && isPasswordValid && isConfirmMatch
-    : isEmailValid; // forgot mode
+      ? isNameValid && isEmailValid && isPasswordValid && isConfirmMatch
+      : isEmailValid; // forgot mode
 
   async function handleGoogleSignIn() {
     setLocalError('');
@@ -816,15 +816,15 @@ function AuthModal({ onClose, defaultMode = 'login' }) {
               {mode === 'login'
                 ? 'Welcome back'
                 : mode === 'signup'
-                ? 'Create your account'
-                : 'Reset your password'}
+                  ? 'Create your account'
+                  : 'Reset your password'}
             </h3>
             <p className="auth-desc">
               {mode === 'login'
                 ? 'Sign in to access your ASL profile, saved presets, and session preferences.'
                 : mode === 'signup'
-                ? 'Sign up to enable real-time sign-to-speech audio in your video calls.'
-                : 'Enter your account email to receive a secure password reset link.'}
+                  ? 'Sign up to enable real-time sign-to-speech audio in your video calls.'
+                  : 'Enter your account email to receive a secure password reset link.'}
             </p>
           </div>
 
@@ -1046,8 +1046,8 @@ function AuthModal({ onClose, defaultMode = 'login' }) {
                   {mode === 'login'
                     ? 'Sign In to SignSpeak'
                     : mode === 'signup'
-                    ? 'Create Account'
-                    : 'Send Reset Link'}
+                      ? 'Create Account'
+                      : 'Send Reset Link'}
                 </span>
               )}
             </button>
@@ -1383,6 +1383,77 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
 
+  const [activeSection, setActiveSection] = useState('hero');
+
+  // Track active section on homepage scroll
+  useEffect(() => {
+    if (view !== 'about') return;
+
+    const sectionIds = [
+      'hero',
+      'interactive-demo',
+      'architecture-section',
+      'comparison',
+      'features',
+      'sdg',
+      'quickstart',
+      'limitations',
+      'faq'
+    ];
+
+    const handleScroll = () => {
+      const scrollPos = window.scrollY + 140;
+      for (let i = sectionIds.length - 1; i >= 0; i--) {
+        const el = document.getElementById(sectionIds[i]);
+        if (el && el.offsetTop <= scrollPos) {
+          setActiveSection(sectionIds[i]);
+          break;
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [view]);
+
+  function scrollToSection(sectionId) {
+    setMobileMenuOpen(false);
+    if (view !== 'about') {
+      setView('about');
+      window.history.replaceState(null, '', '#about');
+      setTimeout(() => {
+        const el = document.getElementById(sectionId);
+        if (el) {
+          const topbarHeight = 78;
+          const bodyRect = document.body.getBoundingClientRect().top;
+          const elementRect = el.getBoundingClientRect().top;
+          const elementPosition = elementRect - bodyRect;
+          const offsetPosition = elementPosition - topbarHeight;
+
+          window.scrollTo({
+            top: offsetPosition,
+            behavior: 'smooth'
+          });
+        }
+      }, 140);
+    } else {
+      const el = document.getElementById(sectionId);
+      if (el) {
+        const topbarHeight = 78;
+        const bodyRect = document.body.getBoundingClientRect().top;
+        const elementRect = el.getBoundingClientRect().top;
+        const elementPosition = elementRect - bodyRect;
+        const offsetPosition = elementPosition - topbarHeight;
+
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        });
+      }
+    }
+  }
+
   const userDisplayName = profile?.display_name || user?.displayName || 'User';
   const userPhoto = profile?.photo_url || user?.photoURL;
 
@@ -1411,7 +1482,7 @@ export default function App() {
       {/* Mobile Navigation Slide-Out Drawer */}
       <aside className={`mobile-nav-drawer ${mobileMenuOpen ? 'open' : ''}`} aria-label="Mobile Navigation">
         <div className="mobile-drawer-head">
-          <div className="mobile-drawer-brand" onClick={() => navigate('about')}>
+          <div className="mobile-drawer-brand" onClick={() => scrollToSection('hero')}>
             <Logo className="mini-logo" />
             <span>SignSpeak</span>
           </div>
@@ -1481,6 +1552,30 @@ export default function App() {
           ))}
         </nav>
 
+        {/* Quick Page Sections in Mobile Drawer */}
+        <div className="mobile-drawer-sections-block">
+          <span className="drawer-section-heading">EXPLORE PAGE SECTIONS</span>
+          <div className="drawer-section-chips">
+            {[
+              { id: 'hero', label: 'Overview' },
+              { id: 'interactive-demo', label: 'Live Simulator' },
+              { id: 'architecture-section', label: 'Architecture' },
+              { id: 'features', label: 'Features' },
+              { id: 'sdg', label: 'SDG 10 Mission' },
+              { id: 'faq', label: 'FAQ' },
+            ].map(({ id, label }) => (
+              <button
+                key={id}
+                type="button"
+                className="drawer-chip-btn"
+                onClick={() => scrollToSection(id)}
+              >
+                <span>{label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="mobile-drawer-footer">
           <div className="drawer-guarantee-pill">
             <ShieldIcon size={14} />
@@ -1506,7 +1601,7 @@ export default function App() {
       <div className="shell">
         {/* Desktop Sidebar (hidden on mobile) */}
         <nav className="sidebar" aria-label="Primary">
-          <div className="mark" onClick={() => navigate('about')} role="button" tabIndex={0} title="SignSpeak Home">
+          <div className="mark" onClick={() => scrollToSection('hero')} role="button" tabIndex={0} title="SignSpeak Home">
             <Logo />
           </div>
           <div className="navlinks">
@@ -1544,44 +1639,43 @@ export default function App() {
                 <MenuIcon size={22} />
               </button>
 
-              <div className="brand" onClick={() => navigate('about')} style={{ cursor: 'pointer' }}>
+              <div className="brand" onClick={() => scrollToSection('hero')} style={{ cursor: 'pointer' }}>
                 <Logo className="mini-logo" />
                 <span>SignSpeak</span>
               </div>
             </div>
 
+            {/* Topbar Center Section Navigation */}
+            <nav className="topbar-nav-links" aria-label="Page Section Navigation">
+              {[
+                { id: 'hero', label: 'Overview' },
+                { id: 'interactive-demo', label: 'Simulator', isLive: true },
+                { id: 'architecture-section', label: 'Architecture' },
+                { id: 'features', label: 'Features' },
+                { id: 'sdg', label: 'SDG 10 Mission' },
+                { id: 'faq', label: 'FAQ' },
+              ].map(({ id, label, isLive }) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={`topbar-section-link ${view === 'about' && activeSection === id ? 'active' : ''}`}
+                  onClick={() => scrollToSection(id)}
+                >
+                  {isLive && <span className="topbar-live-dot" />}
+                  <span>{label}</span>
+                </button>
+              ))}
+            </nav>
+
             <div className="topbar-actions">
               <button
                 type="button"
                 className="btn btn-outline get-extension-btn"
-                onClick={() => {
-                  if (view !== 'about') navigate('about');
-                  setTimeout(() => {
-                    const el = document.getElementById('quickstart');
-                    if (el) el.scrollIntoView({ behavior: 'smooth' });
-                  }, 100);
-                }}
+                onClick={() => scrollToSection('quickstart')}
                 title="How to setup and install the SignSpeak extension"
               >
                 <ExtensionIcon size={15} />
                 <span>Get Extension</span>
-              </button>
-
-              <button
-                type="button"
-                className="btn btn-primary quick-demo-btn"
-                onClick={() => {
-                  if (view !== 'about') {
-                    navigate('about');
-                  }
-                  setTimeout(() => {
-                    const el = document.getElementById('interactive-demo');
-                    if (el) el.scrollIntoView({ behavior: 'smooth' });
-                  }, 120);
-                }}
-                title="Jump to Sign-to-Meet Audio Sandbox"
-              >
-                <span>Live Sandbox</span>
               </button>
 
               {user ? (
