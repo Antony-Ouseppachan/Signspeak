@@ -12,7 +12,8 @@ import {
   CheckIcon,
   LockIcon,
   ContactIcon,
-  MailIcon
+  MailIcon,
+  CloseIcon
 } from './Icons.jsx';
 import { AuthRequiredGate, EmailReplyModal } from './Forms.jsx';
 
@@ -385,8 +386,9 @@ export default function AdminDashboard({ onOpenAuth, navigate }) {
                 type="button"
                 className="clear-search-btn"
                 onClick={() => setSearchQuery('')}
+                title="Clear search"
               >
-                ✕
+                <CloseIcon size={14} />
               </button>
             )}
           </div>

@@ -18,7 +18,8 @@ import {
   SpinnerIcon,
   CameraIcon,
   VideoIcon,
-  AwardIcon
+  AwardIcon,
+  InfoIcon
 } from './Icons.jsx';
 import { aslAlphabet, handBones, wordChallenges, achievementsList } from '../data/aslDataset.js';
 
@@ -1359,7 +1360,8 @@ export default function PlaygroundView({ navigate, onOpenAuth }) {
               {/* Camera Card Footer Controls */}
               <div className="sandbox-footer-controls">
                 <div className="footer-tips-text">
-                  <span>💡 Tip: Place your hand inside the camera frame in good lighting. Sign each letter clearly to advance.</span>
+                  <InfoIcon size={14} />
+                  <span>Tip: Place your hand inside the camera frame in good lighting. Sign each letter clearly to advance.</span>
                 </div>
               </div>
             </div>
@@ -1554,7 +1556,7 @@ export default function PlaygroundView({ navigate, onOpenAuth }) {
               className="close-auth"
               onClick={() => setAchievementsModalOpen(false)}
             >
-              ✕
+              <CloseIcon size={16} />
             </button>
 
             <div className="auth-head">

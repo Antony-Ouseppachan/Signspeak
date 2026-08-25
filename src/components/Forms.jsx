@@ -449,8 +449,9 @@ export function ContactForm({ onOpenAuth }) {
                 type="button"
                 className="clear-search-btn"
                 onClick={() => setAdminSearch('')}
+                title="Clear search"
               >
-                ✕
+                <CloseIcon size={14} />
               </button>
             )}
           </div>
@@ -966,8 +967,9 @@ export function FeedbackForm({ onOpenAuth }) {
                 type="button"
                 className="clear-search-btn"
                 onClick={() => setAdminSearch('')}
+                title="Clear search"
               >
-                ✕
+                <CloseIcon size={14} />
               </button>
             )}
           </div>
