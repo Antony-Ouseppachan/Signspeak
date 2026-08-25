@@ -1568,12 +1568,20 @@ export default function App() {
               </button>
 
               <button
+                type="button"
                 className="btn btn-primary quick-demo-btn"
                 onClick={() => {
-                  if (view !== 'playground') navigate('playground');
+                  if (view !== 'about') {
+                    navigate('about');
+                  }
+                  setTimeout(() => {
+                    const el = document.getElementById('interactive-demo');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }, 120);
                 }}
+                title="Jump to Sign-to-Meet Audio Sandbox"
               >
-                <span>Playground</span>
+                <span>Live Sandbox</span>
               </button>
 
               {user ? (

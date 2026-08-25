@@ -1,16 +1,18 @@
 import { useState } from 'react';
 import { quickstartSteps } from '../data/content.js';
-import { CopyIcon, CheckIcon, TerminalIcon } from './Icons.jsx';
+import { CopyIcon, CheckIcon, TerminalIcon, AlertTriangleIcon, CloseIcon, ExternalLinkIcon } from './Icons.jsx';
 
 export default function QuickstartTerminal() {
   const [activeStep, setActiveStep] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [overlayDisclaimer, setOverlayDisclaimer] = useState(null); // 'copy' | 'download' | null
 
   const step = quickstartSteps[activeStep];
 
   function copyCode() {
     navigator.clipboard.writeText(step.command);
     setCopied(true);
+    setOverlayDisclaimer('copy');
     setTimeout(() => setCopied(false), 2000);
   }
 
@@ -44,10 +46,47 @@ pause
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+
+    setOverlayDisclaimer('download');
   }
 
   return (
     <div className="quickstart-box">
+      {/* 1. Permanent Always-On Screen Disclaimer Banner */}
+      <div className="qs-disclaimer-always">
+        <div className="qs-disclaimer-left">
+          <span className="qs-disclaimer-icon">
+            <AlertTriangleIcon size={18} />
+          </span>
+          <div className="qs-disclaimer-text">
+            <strong>Prerequisites Required:</strong>
+            <span>
+              Please ensure <strong>Python 3.8+</strong> and <strong>Git</strong> are installed and added to your system PATH before running commands or the launcher script.
+            </span>
+          </div>
+        </div>
+        <div className="qs-disclaimer-links">
+          <a
+            href="https://www.python.org/downloads/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="qs-pill-link"
+          >
+            <span>Python.org</span>
+            <ExternalLinkIcon size={11} />
+          </a>
+          <a
+            href="https://git-scm.com/downloads"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="qs-pill-link"
+          >
+            <span>Git-SCM</span>
+            <ExternalLinkIcon size={11} />
+          </a>
+        </div>
+      </div>
+
       <div className="quickstart-nav">
         {quickstartSteps.map((s, idx) => (
           <button
@@ -113,6 +152,96 @@ pause
           <p>{step.tip}</p>
         </div>
       </div>
+
+      {/* 2. Interactive Overlay Disclaimer Modal */}
+      {overlayDisclaimer && (
+        <div className="qs-overlay-backdrop" onClick={() => setOverlayDisclaimer(null)}>
+          <div
+            className="qs-overlay-modal"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="qs-modal-title"
+          >
+            <button
+              type="button"
+              className="qs-overlay-close-btn"
+              onClick={() => setOverlayDisclaimer(null)}
+              aria-label="Close disclaimer overlay"
+            >
+              <CloseIcon size={18} />
+            </button>
+
+            <div className="qs-overlay-header">
+              <div className="qs-overlay-icon-wrap">
+                <AlertTriangleIcon size={28} />
+              </div>
+              <div className="qs-overlay-status-pill">
+                <CheckIcon size={12} />
+                <span>
+                  {overlayDisclaimer === 'copy'
+                    ? 'Command Copied to Clipboard'
+                    : 'run_signspeak.bat Downloaded'}
+                </span>
+              </div>
+              <h3 id="qs-modal-title">System Requirements Disclaimer</h3>
+              <p className="qs-overlay-subtitle">
+                Before executing the script or commands in your terminal, please ensure your system has the following installed:
+              </p>
+            </div>
+
+            <div className="qs-overlay-requirements">
+              <div className="qs-req-card">
+                <div className="qs-req-badge">01</div>
+                <div className="qs-req-body">
+                  <strong>Python 3.8+ Required</strong>
+                  <p>
+                    Required to execute <code>python ai_detection_server.py</code> and host the on-device MediaPipe landmark detector locally at 30 FPS.
+                  </p>
+                  <a
+                    href="https://www.python.org/downloads/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="qs-req-link"
+                  >
+                    <span>Download Python (Official)</span>
+                    <ExternalLinkIcon size={12} />
+                  </a>
+                </div>
+              </div>
+
+              <div className="qs-req-card">
+                <div className="qs-req-badge">02</div>
+                <div className="qs-req-body">
+                  <strong>Git SCM Required</strong>
+                  <p>
+                    Required for <code>git clone -b extension</code> to download the Chrome extension files to your machine.
+                  </p>
+                  <a
+                    href="https://git-scm.com/downloads"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="qs-req-link"
+                  >
+                    <span>Download Git (Official)</span>
+                    <ExternalLinkIcon size={12} />
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <div className="qs-overlay-footer">
+              <button
+                type="button"
+                className="btn btn-primary qs-overlay-ok-btn"
+                onClick={() => setOverlayDisclaimer(null)}
+              >
+                I Understand &amp; Have Them Installed
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
