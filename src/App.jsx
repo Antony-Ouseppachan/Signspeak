@@ -1561,7 +1561,7 @@ export default function App() {
               { id: 'interactive-demo', label: 'Live Simulator' },
               { id: 'architecture-section', label: 'Architecture' },
               { id: 'features', label: 'Features' },
-              { id: 'sdg', label: 'SDG 10 Mission' },
+              { id: 'sdg', label: 'Our Goal' },
               { id: 'faq', label: 'FAQ' },
             ].map(({ id, label }) => (
               <button
@@ -1652,7 +1652,7 @@ export default function App() {
                 { id: 'interactive-demo', label: 'Simulator', isLive: true },
                 { id: 'architecture-section', label: 'Architecture' },
                 { id: 'features', label: 'Features' },
-                { id: 'sdg', label: 'SDG 10 Mission' },
+                { id: 'sdg', label: 'Goals' },
                 { id: 'faq', label: 'FAQ' },
               ].map(({ id, label, isLive }) => (
                 <button
