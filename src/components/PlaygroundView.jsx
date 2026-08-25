@@ -482,8 +482,11 @@ export default function PlaygroundView({ navigate, onOpenAuth }) {
       // H: index and middle extended together horizontally/forward, ring and pinky curled
       matchesTargetPosture = isIndexExtended && isMiddleExtended && !isRingExtended && !isPinkyExtended;
     } else if (targetLetterChar === 'L') {
-      // L: index extended straight up, thumb extended out to side (L shape), other 3 curled
-      matchesTargetPosture = isIndexExtended && isThumbExtended && !isMiddleExtended && !isRingExtended && !isPinkyExtended;
+      // L: index extended straight up, thumb extended sideways forming an L angle, other 3 fingers curled
+      const thumbSeparation = Math.hypot(detectedNorm[4].x - detectedNorm[5].x, detectedNorm[4].y - detectedNorm[5].y);
+      const thumbSpreadX = Math.abs(detectedNorm[4].x - detectedNorm[8].x);
+      const isThumbExtendedL = thumbSeparation > 0.20 || thumbSpreadX > 0.18 || isThumbExtended;
+      matchesTargetPosture = isIndexExtended && isThumbExtendedL && !isMiddleExtended && !isRingExtended && !isPinkyExtended;
     } else if (targetLetterChar === 'O') {
       // O: all 4 fingertips curled in an O shape touching thumb tip
       const indexThumbGap = Math.hypot(detectedNorm[8].x - detectedNorm[4].x, detectedNorm[8].y - detectedNorm[4].y);
@@ -559,9 +562,9 @@ export default function PlaygroundView({ navigate, onOpenAuth }) {
     });
 
     // Valid match criteria: Posture check MUST pass AND template alignment confirms it
-    const isUnderstood = matchesTargetPosture && (bestLetter === targetLetterChar || targetDist < 0.38);
+    const isUnderstood = matchesTargetPosture && (bestLetter === targetLetterChar || targetDist < 0.44);
     const humanAccuracy = isUnderstood
-      ? Math.max(85, Math.min(98.5, Math.round((1 - Math.min(0.35, targetDist) * 0.8) * 100)))
+      ? Math.max(85, Math.min(98.5, Math.round((1 - Math.min(0.40, targetDist) * 0.75) * 100)))
       : Math.max(15, Math.min(65, Math.round((1 - Math.min(1.0, targetDist)) * 100)));
 
     return {
